@@ -1,9 +1,7 @@
 package summaryit
 
 import (
-	"fmt"
 	"log"
-	"path"
 	"strings"
 	"unicode/utf8"
 )
@@ -21,11 +19,11 @@ func SummaryFile(prompt, filename string, maxDepth uint) (string, error) {
 		return "", err
 	}
 
-	basename := path.Base(filename)
-	outfile := fmt.Sprintf("%s/%s.json", path.Dir(filename), strings.Split(basename, ".")[0])
-	WriteJSONFile(outfile, append(textChunks, summaryChunks...))
+	summaryFile := getOutfile(filename, ".txt")
+	WriteTextFile(summaryFile, summaryChunks)
+	WriteJSONFile(getOutfile(filename, ".json"), append(textChunks, summaryChunks...))
 
-	return outfile, err
+	return summaryFile, nil
 }
 
 func recursiveSummary(prompt string, depth uint, maxDepth uint, chunks ChunkSlice) (ChunkSlice, error) {

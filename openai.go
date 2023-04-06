@@ -10,7 +10,7 @@ import (
 
 func summaryByOpenAI(prompt, content string) string {
 	log.Println("Generating text summary by openai...")
-	log.Println("Prompt: ", prompt, " content: ", content)
+	// log.Println("Prompt: ", prompt, " content: ", content)
 
 	apiKey := os.Getenv("OPENAI_API_KEY")
 	if apiKey == "" {
@@ -37,7 +37,7 @@ func summaryByOpenAI(prompt, content string) string {
 	}
 
 	result := resp.Choices[0].Message.Content
-	log.Println("ChatCompletion result: ", result)
+	// log.Println("ChatCompletion result: ", result)
 	log.Println("The text summary has been successfully generated")
 	return result
 }
