@@ -19,7 +19,7 @@ func SummaryFile(prompt, filename string, maxDepth uint) (string, error) {
 		return "", err
 	}
 
-	summaryFile := getOutfile(filename, ".txt")
+	summaryFile := getOutfile(filename, ".sum")
 	WriteTextFile(summaryFile, summaryChunks)
 	WriteJSONFile(getOutfile(filename, ".json"), append(textChunks, summaryChunks...))
 
