@@ -8,13 +8,14 @@ import (
 
 const (
 	NoLimitOnDepth = 18446744073709551615
+	MaxGroupChunks = 4
 )
 
-func SummaryFile(prompt, filename string, maxDepth uint) (string, error) {
+func SummaryFile(prompt, filename string) (string, error) {
 	textChunks := ReadTextFile(filename)
 
 	log.Println("Total text chunks: ", len(textChunks))
-	summaryChunks, err := recursiveSummary(prompt, 0, maxDepth, textChunks)
+	summaryChunks, err := recursiveSummary(prompt, 0, textChunks)
 	if err != nil {
 		return "", err
 	}
@@ -26,12 +27,8 @@ func SummaryFile(prompt, filename string, maxDepth uint) (string, error) {
 	return summaryFile, nil
 }
 
-func recursiveSummary(prompt string, depth uint, maxDepth uint, chunks ChunkSlice) (ChunkSlice, error) {
+func recursiveSummary(prompt string, depth uint, chunks ChunkSlice) (ChunkSlice, error) {
 	parentChunks := make(ChunkSlice, 0, len(chunks)/2)
-	if depth > maxDepth {
-		log.Printf("Exceeding max depth, current depth: %d, max depth: %d", depth, maxDepth)
-		return parentChunks, nil
-	}
 
 	tokens := strings.Builder{}
 	start := 0
@@ -60,7 +57,7 @@ func recursiveSummary(prompt string, depth uint, maxDepth uint, chunks ChunkSlic
 	}
 
 	if len(parentChunks) > 1 {
-		grandParentChunks, err := recursiveSummary(prompt, depth+1, maxDepth, parentChunks)
+		grandParentChunks, err := recursiveSummary(prompt, depth+1, parentChunks)
 		if err != nil {
 			return parentChunks, err
 		}
