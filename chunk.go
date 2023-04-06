@@ -1,4 +1,4 @@
-package textsummary
+package summaryit
 
 import (
 	"crypto/md5"
