@@ -3,6 +3,7 @@ package summaryit
 import (
 	"crypto/md5"
 	"fmt"
+	"strings"
 	"unicode/utf8"
 )
 
@@ -41,15 +42,48 @@ func NewSummaryChunk(summary string, depth uint) *Chunk {
 	}
 }
 
-func (cd *Chunk) Len() int {
-	return len(cd.Text)
+func (c *Chunk) Len() int {
+	return len(c.Text)
 }
 
-func (cd *Chunk) RuneCountInString() int {
-	return utf8.RuneCountInString(cd.Text)
+func (c *Chunk) RuneCountInString() int {
+	return utf8.RuneCountInString(c.Text)
 }
 
-func (cd *Chunk) String() string {
-	return fmt.Sprintf("%d:%d:%s:%s:%d",
-		cd.Category, cd.Depth, cd.ParentID, cd.ID, cd.RuneCountInString())
+func (c *Chunk) String() string {
+	return fmt.Sprintf("%d:%d:%s:%s:%d", c.Category, c.Depth, c.ParentID, c.ID, c.RuneCountInString())
+}
+
+func (cs ChunkSlice) RuneCountInString() int {
+	c := 0
+	for _, chunk := range cs {
+		c += chunk.RuneCountInString()
+	}
+	return c
+}
+
+func (cs ChunkSlice) TokenString() string {
+	s := strings.Builder{}
+	for _, chunk := range cs {
+		s.WriteString(chunk.Text + " ")
+	}
+	return s.String()
+}
+
+func (cs ChunkSlice) String() string {
+	c := 0
+	cm := make(map[Category]bool)
+	dm := make(map[uint]bool)
+
+	for _, chunk := range cs {
+		c++
+		if _, ok := cm[chunk.Category]; !ok {
+			cm[chunk.Category] = true
+		}
+
+		if _, ok := dm[chunk.Depth]; !ok {
+			dm[chunk.Depth] = true
+		}
+	}
+	return fmt.Sprintf("Category: %v, Depth: %v, Childs: %d", cm, dm, c)
 }

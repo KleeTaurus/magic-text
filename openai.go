@@ -9,9 +9,6 @@ import (
 )
 
 func summaryByOpenAI(prompt, content string) string {
-	log.Println("Generating text summary by openai...")
-	// log.Println("Prompt: ", prompt, " content: ", content)
-
 	apiKey := os.Getenv("OPENAI_API_KEY")
 	if apiKey == "" {
 		log.Fatal("Missing OpenAI API key")
@@ -21,7 +18,8 @@ func summaryByOpenAI(prompt, content string) string {
 	resp, err := client.CreateChatCompletion(
 		context.Background(),
 		openai.ChatCompletionRequest{
-			Model: openai.GPT3Dot5Turbo,
+			Model:       openai.GPT3Dot5Turbo,
+			Temperature: 0,
 			Messages: []openai.ChatCompletionMessage{
 				{
 					Role:    openai.ChatMessageRoleUser,
@@ -36,8 +34,5 @@ func summaryByOpenAI(prompt, content string) string {
 		return ""
 	}
 
-	result := resp.Choices[0].Message.Content
-	// log.Println("ChatCompletion result: ", result)
-	log.Println("The text summary has been successfully generated")
-	return result
+	return resp.Choices[0].Message.Content
 }

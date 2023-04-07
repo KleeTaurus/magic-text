@@ -1,21 +1,20 @@
 package summaryit
 
 import (
+	"fmt"
 	"log"
-	"strings"
-	"unicode/utf8"
 )
 
 const (
-	NoLimitOnDepth = 18446744073709551615
-	MaxGroupChunks = 4
+	MaxGroupChunks = 3
+	BaseChunkDepth = 0
 )
 
 func SummaryFile(prompt, filename string) (string, error) {
 	textChunks := ReadTextFile(filename)
 
-	log.Println("Total text chunks: ", len(textChunks))
-	summaryChunks, err := recursiveSummary(prompt, 0, textChunks)
+	fmt.Println("Total chunks of input file: ", len(textChunks))
+	summaryChunks, err := RecursiveSummary(prompt, textChunks, BaseChunkDepth)
 	if err != nil {
 		return "", err
 	}
@@ -27,42 +26,44 @@ func SummaryFile(prompt, filename string) (string, error) {
 	return summaryFile, nil
 }
 
-func recursiveSummary(prompt string, depth uint, chunks ChunkSlice) (ChunkSlice, error) {
+func RecursiveSummary(prompt string, chunks ChunkSlice, depth uint) (ChunkSlice, error) {
 	parentChunks := make(ChunkSlice, 0, len(chunks)/2)
+	childChunks := make(ChunkSlice, 0, len(chunks))
 
-	tokens := strings.Builder{}
-	start := 0
-	for i, chunk := range chunks {
-		if utf8.RuneCountInString(tokens.String())+chunk.RuneCountInString() > maxTokens {
-			summary := summaryByOpenAI(prompt, tokens.String())
-			parentChunk := NewSummaryChunk(summary, depth)
-			parentChunks = append(parentChunks, parentChunk)
+	for _, chunk := range chunks {
+		if childChunks.RuneCountInString()+chunk.RuneCountInString() > maxTokens ||
+			len(childChunks) >= MaxGroupChunks {
+			parentChunks = addParentChunk(prompt, depth, parentChunks, childChunks)
 
-			for j := start; j < i; j++ {
-				chunks[j].ParentID = parentChunk.ID
-			}
-
-			start = i
-			tokens.Reset()
+			// Clear the child chunks
+			childChunks = make(ChunkSlice, 0, len(chunks))
 		}
-		tokens.WriteString(chunk.Text)
+		childChunks = append(childChunks, chunk)
 	}
-
-	summary := summaryByOpenAI(prompt, tokens.String())
-	parentChunk := NewSummaryChunk(summary, depth)
-	parentChunks = append(parentChunks, parentChunk)
-
-	for j := start; j < len(chunks); j++ {
-		chunks[j].ParentID = parentChunk.ID
-	}
+	parentChunks = addParentChunk(prompt, depth, parentChunks, childChunks)
 
 	if len(parentChunks) > 1 {
-		grandParentChunks, err := recursiveSummary(prompt, depth+1, parentChunks)
+		grandParentChunks, err := RecursiveSummary(prompt, parentChunks, depth+1)
 		if err != nil {
-			return parentChunks, err
+			return nil, err
 		}
 		parentChunks = append(parentChunks, grandParentChunks...)
 	}
 
 	return parentChunks, nil
+}
+
+func addParentChunk(prompt string, depth uint, parentChunks, childChunks ChunkSlice) ChunkSlice {
+	log.Printf("%s, Generating text summary by openai.\n", childChunks)
+	summary := summaryByOpenAI(prompt, childChunks.TokenString())
+	log.Printf("%s, The text summary has been successfully generated.\n", childChunks)
+
+	parentChunk := NewSummaryChunk(summary, depth)
+	// Update the child chunk's parent id
+	for _, chunk := range childChunks {
+		chunk.ParentID = parentChunk.ID
+	}
+
+	parentChunks = append(parentChunks, parentChunk)
+	return parentChunks
 }
