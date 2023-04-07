@@ -6,8 +6,9 @@ import (
 )
 
 const (
-	MaxGroupChunks = 3
-	BaseChunkDepth = 0
+	MaxGroupChunks     = 2
+	MaxCurrentRequests = 3
+	BaseChunkDepth     = 0
 )
 
 func SummaryFile(prompt, filename string) (string, error) {
@@ -31,7 +32,7 @@ func RecursiveSummary(prompt string, chunks ChunkSlice, depth uint) (ChunkSlice,
 	childChunks := make(ChunkSlice, 0, len(chunks))
 
 	for _, chunk := range chunks {
-		if childChunks.RuneCountInString()+chunk.RuneCountInString() > maxTokens ||
+		if childChunks.Tokens()+chunk.Tokens() > maxTokens ||
 			len(childChunks) >= MaxGroupChunks {
 			parentChunks = addParentChunk(prompt, depth, parentChunks, childChunks)
 

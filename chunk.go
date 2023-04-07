@@ -46,18 +46,18 @@ func (c *Chunk) Len() int {
 	return len(c.Text)
 }
 
-func (c *Chunk) RuneCountInString() int {
+func (c *Chunk) Tokens() int {
 	return utf8.RuneCountInString(c.Text)
 }
 
 func (c *Chunk) String() string {
-	return fmt.Sprintf("%d:%d:%s:%s:%d", c.Category, c.Depth, c.ParentID, c.ID, c.RuneCountInString())
+	return fmt.Sprintf("%d:%d:%s:%s:%d", c.Category, c.Depth, c.ParentID, c.ID, c.Tokens())
 }
 
-func (cs ChunkSlice) RuneCountInString() int {
+func (cs ChunkSlice) Tokens() int {
 	c := 0
 	for _, chunk := range cs {
-		c += chunk.RuneCountInString()
+		c += chunk.Tokens()
 	}
 	return c
 }
@@ -68,6 +68,20 @@ func (cs ChunkSlice) TokenString() string {
 		s.WriteString(chunk.Text + " ")
 	}
 	return s.String()
+}
+
+func (cs ChunkSlice) Group(maxTokens, maxChunks int) []ChunkSlice {
+	groups := make([]ChunkSlice, 0, len(cs))
+	group := make(ChunkSlice, 0, maxChunks)
+	for _, c := range cs {
+		if c.Tokens()+group.Tokens() > maxTokens || len(group) >= maxChunks {
+			groups = append(groups, group)
+			group = make(ChunkSlice, 0, maxChunks)
+		}
+		group = append(group, c)
+	}
+	groups = append(groups, group)
+	return groups
 }
 
 func (cs ChunkSlice) String() string {
@@ -85,5 +99,5 @@ func (cs ChunkSlice) String() string {
 			dm[chunk.Depth] = true
 		}
 	}
-	return fmt.Sprintf("Category: %v, Depth: %v, Childs: %d", cm, dm, c)
+	return fmt.Sprintf("Category: %v, Depth: %v, Childs: %d, Total Tokens: %d", cm, dm, c, cs.Tokens())
 }
