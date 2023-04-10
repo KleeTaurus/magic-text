@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	maxTokens = 2048
+	MaxTokensPerRequest = 1024
 )
 
 // ReadTextFile reads a text file and stores it's content in the Chunk slice.
@@ -31,7 +31,7 @@ func ReadTextFile(filename string) ChunkSlice {
 			continue
 		}
 
-		if utf8.RuneCountInString(sb.String())+utf8.RuneCountInString(line) > maxTokens {
+		if utf8.RuneCountInString(sb.String())+utf8.RuneCountInString(line) > MaxTokensPerRequest {
 			chunks = append(chunks, NewTextChunk(sb.String()))
 			sb.Reset()
 		}

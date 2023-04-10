@@ -70,17 +70,17 @@ func (cs ChunkSlice) TokenString() string {
 	return s.String()
 }
 
-func (cs ChunkSlice) Group(maxTokens, maxChunks int) []ChunkSlice {
-	groups := make([]ChunkSlice, 0, len(cs))
-	group := make(ChunkSlice, 0, maxChunks)
+func (cs ChunkSlice) Group(maxTokensPerRequest, maxChunksInGroup int) []ChunkSlice {
+	groups := make([]ChunkSlice, 0, len(cs)/2)
+	chunkGroup := make(ChunkSlice, 0, maxChunksInGroup)
 	for _, c := range cs {
-		if c.Tokens()+group.Tokens() > maxTokens || len(group) >= maxChunks {
-			groups = append(groups, group)
-			group = make(ChunkSlice, 0, maxChunks)
+		if c.Tokens()+chunkGroup.Tokens() > maxTokensPerRequest || len(chunkGroup) >= maxChunksInGroup {
+			groups = append(groups, chunkGroup)
+			chunkGroup = make(ChunkSlice, 0, maxChunksInGroup)
 		}
-		group = append(group, c)
+		chunkGroup = append(chunkGroup, c)
 	}
-	groups = append(groups, group)
+	groups = append(groups, chunkGroup)
 	return groups
 }
 
