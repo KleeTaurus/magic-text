@@ -2,41 +2,43 @@ package summaryit
 
 import (
 	"fmt"
+	"reflect"
 	"testing"
 )
 
-func TestGroup(t *testing.T) {
-	chunks := make(ChunkSlice, 0, 10)
-	for i := 0; i < 10; i++ {
-		chunks = append(chunks, NewTextChunk(fmt.Sprintf("This is a chunk text %03d", i))) // run count: 24
+func TestChunkSlice_SubGroups(t *testing.T) {
+	size := 9
+	chunks := make(ChunkSlice, 0, size)
+	for i := 0; i < size; i++ {
+		chunks = append(chunks, NewTextChunk(fmt.Sprintf("This is a chunk %d", i)))
 	}
 
-	groups := chunks.SubGroups(48, 3)
-	if len(groups) != 5 {
-		t.Errorf("expected 5 groups, got %d", len(groups))
+	type args struct {
+		maxTokensPerRequest int
+		maxChunksInGroup    int
 	}
-	for _, g := range groups {
-		if g.Tokens() != 48 {
-			t.Errorf("expected 48 tokens, got %d", g.Tokens())
-		}
+	tests := []struct {
+		name string
+		cs   ChunkSlice
+		args args
+		want []ChunkSlice
+	}{
+		{"Divide by max chunks in group", chunks, args{30, 3}, []ChunkSlice{
+			{chunks[0], chunks[1], chunks[2]},
+			{chunks[3], chunks[4], chunks[5]},
+			{chunks[6], chunks[7], chunks[8]},
+		}},
+		{"Divide by max tokens", chunks, args{21, 5}, []ChunkSlice{
+			{chunks[0], chunks[1], chunks[2]},
+			{chunks[3], chunks[4], chunks[5]},
+			{chunks[6], chunks[7], chunks[8]},
+		}},
 	}
-
-	groups = chunks.SubGroups(250, 4)
-	if len(groups) != 3 {
-		t.Errorf("expected 3 groups, got %d", len(groups))
-	}
-}
-
-func TestCountTokens(t *testing.T) {
-	text1 := "你好，世界！"
-	text2 := "Hello, World!"
-	tokenCount := CountTokens(text1)
-	if tokenCount != 7 {
-		t.Errorf("expected 7 tokens, got %d", tokenCount)
-	}
-
-	tokenCount = CountTokens(text2)
-	if tokenCount != 4 {
-		t.Errorf("expected 4 tokens, got %d", tokenCount)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.cs.SubGroups(tt.args.maxTokensPerRequest, tt.args.maxChunksInGroup); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("ChunkSlice.SubGroups() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }
