@@ -5,11 +5,6 @@ import (
 	"log"
 	"os"
 	"strings"
-	"unicode/utf8"
-)
-
-const (
-	MaxTokensPerRequest = 1024
 )
 
 // ReadTextFile reads a text file and stores it's content in the Chunk slice.
@@ -20,7 +15,7 @@ func ReadTextFile(filename string) ChunkSlice {
 	}
 	defer file.Close()
 
-	chunks := make(ChunkSlice, 0, 25)
+	chunks := make(ChunkSlice, 0, 10)
 	sb := strings.Builder{}
 
 	scanner := bufio.NewScanner(file)
@@ -31,7 +26,7 @@ func ReadTextFile(filename string) ChunkSlice {
 			continue
 		}
 
-		if utf8.RuneCountInString(sb.String())+utf8.RuneCountInString(line) > MaxTokensPerRequest {
+		if CountTokens(sb.String())+CountTokens(line) > MaxTokensPerRequest {
 			chunks = append(chunks, NewTextChunk(sb.String()))
 			sb.Reset()
 		}

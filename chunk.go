@@ -4,7 +4,6 @@ import (
 	"crypto/md5"
 	"fmt"
 	"strings"
-	"unicode/utf8"
 )
 
 type Category int8
@@ -20,6 +19,7 @@ type Chunk struct {
 	ParentID string   `json:"parent_id"`
 	ID       string   `json:"id"`
 	Text     string   `json:"text"`
+	Tokens   int      `json:"tokens"`
 }
 
 type ChunkSlice []*Chunk
@@ -30,6 +30,7 @@ func NewTextChunk(text string) *Chunk {
 		Category: CatText,
 		Text:     text,
 		ID:       fmt.Sprintf("%x", md5.Sum([]byte(text))),
+		Tokens:   CountTokens(text),
 	}
 }
 
@@ -39,27 +40,20 @@ func NewSummaryChunk(summary string, depth uint) *Chunk {
 		Category: CatSummary,
 		Text:     summary,
 		ID:       fmt.Sprintf("%x", md5.Sum([]byte(summary))),
+		Tokens:   CountTokens(summary),
 	}
-}
-
-func (c *Chunk) Len() int {
-	return len(c.Text)
-}
-
-func (c *Chunk) Tokens() int {
-	return utf8.RuneCountInString(c.Text)
 }
 
 func (c *Chunk) String() string {
-	return fmt.Sprintf("%d:%d:%s:%s:%d", c.Category, c.Depth, c.ParentID, c.ID, c.Tokens())
+	return fmt.Sprintf("%d:%d:%s:%s:%d", c.Category, c.Depth, c.ParentID, c.ID, c.Tokens)
 }
 
 func (cs ChunkSlice) Tokens() int {
-	c := 0
+	tokens := 0
 	for _, chunk := range cs {
-		c += chunk.Tokens()
+		tokens += chunk.Tokens
 	}
-	return c
+	return tokens
 }
 
 func (cs ChunkSlice) TokenString() string {
@@ -70,27 +64,26 @@ func (cs ChunkSlice) TokenString() string {
 	return s.String()
 }
 
-func (cs ChunkSlice) Group(maxTokensPerRequest, maxChunksInGroup int) []ChunkSlice {
+func (cs ChunkSlice) SubGroups(maxTokensPerRequest, maxChunksInGroup int) []ChunkSlice {
 	groups := make([]ChunkSlice, 0, len(cs)/2)
 	chunkGroup := make(ChunkSlice, 0, maxChunksInGroup)
-	for _, c := range cs {
-		if c.Tokens()+chunkGroup.Tokens() > maxTokensPerRequest || len(chunkGroup) >= maxChunksInGroup {
+	for _, chunk := range cs {
+		if chunkGroup.Tokens()+chunk.Tokens > maxTokensPerRequest || len(chunkGroup) >= maxChunksInGroup {
 			groups = append(groups, chunkGroup)
+			// reset chunkGroup to empty
 			chunkGroup = make(ChunkSlice, 0, maxChunksInGroup)
 		}
-		chunkGroup = append(chunkGroup, c)
+		chunkGroup = append(chunkGroup, chunk)
 	}
 	groups = append(groups, chunkGroup)
 	return groups
 }
 
 func (cs ChunkSlice) String() string {
-	c := 0
 	cm := make(map[Category]bool)
 	dm := make(map[uint]bool)
 
 	for _, chunk := range cs {
-		c++
 		if _, ok := cm[chunk.Category]; !ok {
 			cm[chunk.Category] = true
 		}
@@ -99,5 +92,5 @@ func (cs ChunkSlice) String() string {
 			dm[chunk.Depth] = true
 		}
 	}
-	return fmt.Sprintf("Category: %v, Depth: %v, Childs: %d, Total Tokens: %d", cm, dm, c, cs.Tokens())
+	return fmt.Sprintf("Category: %v, Depth: %v, Childs: %d, Total Tokens: %d", cm, dm, len(cs), cs.Tokens())
 }

@@ -8,9 +8,10 @@ import (
 )
 
 const (
-	MaxGroupChunks = 2
-	MaxConcurrent  = 3
-	BaseChunkDepth = 0
+	MaxGroupChunks      = 2
+	MaxConcurrent       = 3
+	BaseChunkDepth      = 0
+	MaxTokensPerRequest = 1024
 )
 
 func SummaryFile(prompt, filename string) (string, error) {
@@ -22,9 +23,9 @@ func SummaryFile(prompt, filename string) (string, error) {
 		return "", err
 	}
 
-	summaryFile := getOutfile(filename, ".sum")
+	summaryFile := GenerateFilename(filename, ".sum")
 	WriteTextFile(summaryFile, summaryChunks)
-	WriteJSONFile(getOutfile(filename, ".json"), append(textChunks, summaryChunks...))
+	WriteJSONFile(GenerateFilename(filename, ".json"), append(textChunks, summaryChunks...))
 
 	return summaryFile, nil
 }
@@ -34,7 +35,7 @@ func RecursiveSummary(prompt string, chunks ChunkSlice, depth uint) (ChunkSlice,
 	limiter := make(chan struct{}, MaxConcurrent)
 	var wg sync.WaitGroup
 
-	for i, chunkGroup := range chunks.Group(MaxTokensPerRequest, MaxGroupChunks) {
+	for i, chunkGroup := range chunks.SubGroups(MaxTokensPerRequest, MaxGroupChunks) {
 		limiter <- struct{}{}
 		wg.Add(1)
 
