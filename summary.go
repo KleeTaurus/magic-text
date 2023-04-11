@@ -23,9 +23,10 @@ func SummaryFile(prompt, filename string) (string, error) {
 		return "", err
 	}
 
-	summaryFile := GenerateFilename(filename, ".sum")
+	summaryFile := MakeFilename(filename, "sum")
+	jsonFile := MakeFilename(filename, "json")
 	WriteTextFile(summaryFile, summaryChunks)
-	WriteJSONFile(GenerateFilename(filename, ".json"), append(textChunks, summaryChunks...))
+	WriteJSONFile(jsonFile, append(textChunks, summaryChunks...))
 
 	return summaryFile, nil
 }

@@ -2,17 +2,12 @@ package summaryit
 
 import (
 	"fmt"
-	"path"
-	"strings"
 
 	"github.com/pkoukk/tiktoken-go"
 )
 
-func GenerateFilename(infile, ext string) string {
-	dirname := path.Dir(infile)
-	basename := path.Base(infile)
-
-	return fmt.Sprintf("%s/%s%s", dirname, strings.Split(basename, ".")[0], ext)
+func MakeFilename(infile, ext string) string {
+	return fmt.Sprintf("%s.%s", infile, ext)
 }
 
 func CountTokens(text string) int {
