@@ -10,4 +10,4 @@ Generate a high-quality summary of a given text input.
 - [ ] Support explicitly set OpenAI APIKey
 - [x] Generate parent summary with fixed number of chunks
 - [x] Calculate tokens with [tiktoken-go](https://github.com/pkoukk/tiktoken-go)
-- [ ] Add retry logic for goroutines
+- [x] Add retry logic for goroutines

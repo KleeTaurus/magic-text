@@ -5,6 +5,7 @@ import (
 	"log"
 	"sort"
 	"sync"
+	"time"
 )
 
 const (
@@ -76,7 +77,11 @@ func RecursiveSummary(prompt string, chunks ChunkSlice, depth uint) (ChunkSlice,
 
 func getParentChunk(prompt string, depth uint, groupChunks ChunkSlice) *Chunk {
 	log.Printf("%s, Generating text summary by openai.\n", groupChunks)
-	summary := summaryByOpenAI(prompt, groupChunks.TokenString())
+	summary, err := retry(summaryByOpenAI, prompt, groupChunks.TokenString(), 3)
+	if err != nil {
+		log.Printf("%s, Generating text summary failed, err: %v", groupChunks, err)
+		return NewSummaryChunk("", depth)
+	}
 	log.Printf("%s, The text summary has been successfully generated.\n", groupChunks)
 
 	parentChunk := NewSummaryChunk(summary, depth)
@@ -86,4 +91,16 @@ func getParentChunk(prompt string, depth uint, groupChunks ChunkSlice) *Chunk {
 	}
 
 	return parentChunk
+}
+
+func retry(fn func(string, string) (string, error), prompt, content string, times int) (string, error) {
+	for i := 0; i < times; i++ {
+		str, err := fn(prompt, content)
+		if err == nil {
+			return str, nil
+		}
+		log.Printf("[%d] Calling OpenAI API failed, err: %v", i, err)
+		time.Sleep(time.Second * 5)
+	}
+	return "", fmt.Errorf("retry failed for %d times", times)
 }

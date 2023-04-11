@@ -8,7 +8,7 @@ import (
 	"github.com/sashabaranov/go-openai"
 )
 
-func summaryByOpenAI(prompt, content string) string {
+func summaryByOpenAI(prompt, content string) (string, error) {
 	apiKey := os.Getenv("OPENAI_API_KEY")
 	if apiKey == "" {
 		log.Fatal("Missing OpenAI API key")
@@ -31,7 +31,7 @@ func summaryByOpenAI(prompt, content string) string {
 
 	if err != nil {
 		log.Printf("ChatCompletion error: %v\n", err)
-		return ""
+		return "", err
 	}
 
 	return resp.Choices[0].Message.Content
