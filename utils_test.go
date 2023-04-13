@@ -25,6 +25,12 @@ func TestCountTokens(t *testing.T) {
 	}
 }
 
+func BenchmarkCountTokens(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		CountTokens("Hello, world!")
+	}
+}
+
 func TestMakeFilename(t *testing.T) {
 	type args struct {
 		infile string

@@ -9,10 +9,10 @@ import (
 )
 
 const (
-	MaxGroupChunks      = 2
+	MaxGroupChunks      = 3
 	MaxConcurrent       = 3
 	BaseChunkDepth      = 0
-	MaxTokensPerRequest = 1024
+	MaxTokensPerRequest = 2048
 )
 
 func SummaryFile(prompt, filename string) (string, error) {
@@ -82,7 +82,7 @@ func getParentChunk(prompt string, depth uint, groupChunks ChunkSlice) *Chunk {
 		log.Printf("%s, Generating text summary failed, err: %v", groupChunks, err)
 		return NewSummaryChunk("", depth)
 	}
-	log.Printf("%s, The text summary has been successfully generated.\n", groupChunks)
+	// log.Printf("%s, The text summary has been successfully generated.\n", groupChunks)
 
 	parentChunk := NewSummaryChunk(summary, depth)
 	// Update the child chunk's parent id

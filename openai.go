@@ -34,5 +34,5 @@ func summaryByOpenAI(prompt, content string) (string, error) {
 		return "", err
 	}
 
-	return resp.Choices[0].Message.Content
+	return resp.Choices[0].Message.Content, nil
 }
