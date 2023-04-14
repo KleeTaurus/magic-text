@@ -2,6 +2,7 @@ package summaryit
 
 import (
 	"bufio"
+	"encoding/json"
 	"log"
 	"os"
 	"strings"
@@ -42,5 +43,18 @@ func ReadTextFile(filename string) ChunkSlice {
 	// Append the remaining text to the chunk slice
 	chunks = append(chunks, NewTextChunk(sb.String()))
 
+	return chunks
+}
+
+func ReadJSONFile(filename string) ChunkSlice {
+	data, err := os.ReadFile(filename)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var chunks ChunkSlice
+	if err := json.Unmarshal(data, &chunks); err != nil {
+		log.Fatal(err)
+	}
 	return chunks
 }
