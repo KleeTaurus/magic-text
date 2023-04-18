@@ -94,3 +94,27 @@ func (cs ChunkSlice) String() string {
 	}
 	return fmt.Sprintf("Category: %v, Depth: %v, Childs: %d, Total Tokens: %d", cm, dm, len(cs), cs.Tokens())
 }
+
+func getChildChunk(chunks ChunkSlice, chunkID string) *Chunk {
+	for _, chunk := range chunks {
+		if chunk.ParentID == chunkID {
+			if chunk.Category != CatText {
+				return getChildChunk(chunks, chunk.ID)
+			}
+			return chunk
+		}
+	}
+	return nil
+}
+
+func FindTextChunks(chunks ChunkSlice, summaryDepth uint) ChunkSlice {
+	textChunks := make(ChunkSlice, 0, 21)
+	for _, chunk := range chunks {
+		if chunk.Category == CatSummary && chunk.Depth == summaryDepth {
+			textChunk := getChildChunk(chunks, chunk.ID)
+			textChunks = append(textChunks, textChunk)
+		}
+	}
+
+	return textChunks
+}
