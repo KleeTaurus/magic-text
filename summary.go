@@ -5,27 +5,22 @@ import (
 	"log"
 	"sort"
 	"sync"
-	"time"
 )
 
+type Summary struct{}
+
 const (
-	MaxGroupChunks      = 6
-	MaxConcurrent       = 3
+	MaxGroupChunks      = 3
+	MaxConcurrent       = 5
 	BaseChunkDepth      = 0
 	MaxTokensPerRequest = 2048
 )
 
-func SummaryFile(customPrompt, filename string) (string, error) {
-	textChunks := ReadTextFile(filename)
+func SummaryFile(topic, filename string) (string, error) {
+	textChunks := ReadSRTFile(filename)
 
 	fmt.Println("Total chunks of input file: ", len(textChunks))
-	var summaryChunks ChunkSlice
-	var err error
-	if customPrompt != "" {
-		summaryChunks, err = RecursiveSummary(fmt.Sprintf(generateSummaryPromptWithTopics, customPrompt), textChunks, BaseChunkDepth)
-	} else {
-		summaryChunks, err = RecursiveSummary(generateSummaryPrompt, textChunks, BaseChunkDepth)
-	}
+	summaryChunks, err := recursiveSummary(topic, textChunks, BaseChunkDepth)
 	if err != nil {
 		return "", err
 	}
@@ -38,7 +33,7 @@ func SummaryFile(customPrompt, filename string) (string, error) {
 	return summaryFile, nil
 }
 
-func RecursiveSummary(prompt string, chunks ChunkSlice, depth uint) (ChunkSlice, error) {
+func recursiveSummary(topic string, chunks ChunkSlice, depth uint) (ChunkSlice, error) {
 	parentChunksMap := make(map[int]*Chunk)
 	limiter := make(chan struct{}, MaxConcurrent)
 	var wg sync.WaitGroup
@@ -53,7 +48,7 @@ func RecursiveSummary(prompt string, chunks ChunkSlice, depth uint) (ChunkSlice,
 				wg.Done()
 			}()
 
-			parentChunk := getParentChunk(prompt, depth, chunkGroup)
+			parentChunk := getParentChunk(topic, depth, chunkGroup)
 			parentChunksMap[i] = parentChunk
 		}(chunkGroup, i, parentChunksMap)
 	}
@@ -71,7 +66,7 @@ func RecursiveSummary(prompt string, chunks ChunkSlice, depth uint) (ChunkSlice,
 	}
 
 	if len(parentChunks) > 1 {
-		grandParentChunks, err := RecursiveSummary(prompt, parentChunks, depth+1)
+		grandParentChunks, err := recursiveSummary(topic, parentChunks, depth+1)
 		if err != nil {
 			return nil, err
 		}
@@ -81,14 +76,13 @@ func RecursiveSummary(prompt string, chunks ChunkSlice, depth uint) (ChunkSlice,
 	return parentChunks, nil
 }
 
-func getParentChunk(prompt string, depth uint, groupChunks ChunkSlice) *Chunk {
+func getParentChunk(topic string, depth uint, groupChunks ChunkSlice) *Chunk {
 	log.Printf("%s, Generating text summary by openai.\n", groupChunks)
-	summary, err := retry(summaryByOpenAI, prompt, groupChunks.TokenString(), 3)
+	summary, err := completionWithRetry(fmt.Sprintf(GenerateSummaryPrompt, topic, groupChunks.TokenString()))
 	if err != nil {
 		log.Printf("%s, Generating text summary failed, err: %v", groupChunks, err)
 		return NewSummaryChunk("", depth)
 	}
-	// log.Printf("%s, The text summary has been successfully generated.\n", groupChunks)
 
 	parentChunk := NewSummaryChunk(summary, depth)
 	// Update the child chunk's parent id
@@ -97,16 +91,4 @@ func getParentChunk(prompt string, depth uint, groupChunks ChunkSlice) *Chunk {
 	}
 
 	return parentChunk
-}
-
-func retry(fn func(string, string) (string, error), prompt, content string, times int) (string, error) {
-	for i := 0; i < times; i++ {
-		str, err := fn(prompt, content)
-		if err == nil {
-			return str, nil
-		}
-		log.Printf("[%d] Calling OpenAI API failed, err: %v", i, err)
-		time.Sleep(time.Second * 5)
-	}
-	return "", fmt.Errorf("retry failed for %d times", times)
 }

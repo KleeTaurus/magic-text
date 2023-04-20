@@ -1,4 +1,4 @@
-module github.com/KleeTaurus/summary-it
+module github.com/KleeTaurus/magictext
 
 go 1.19
 
