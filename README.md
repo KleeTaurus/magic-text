@@ -3,6 +3,7 @@ Generate a high-quality summary of a given text input.
 
 # TODO
 
+- [ ] return the error instance, don't call log's fatal function directly
 - [ ] Optimize logging output
 - [x] Support goroutines to improve performance
 - [ ] Write project documentation

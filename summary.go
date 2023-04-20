@@ -1,4 +1,4 @@
-package summaryit
+package magictext
 
 import (
 	"fmt"
@@ -9,38 +9,23 @@ import (
 )
 
 const (
-	MaxGroupChunks      = 3
+	MaxGroupChunks      = 6
 	MaxConcurrent       = 3
 	BaseChunkDepth      = 0
 	MaxTokensPerRequest = 2048
 )
 
-var (
-	prompt = "`reset` " +
-		"`no quotes` " +
-		"`no explanations` " +
-		"`no prompt` " +
-		"`no self-reference` " +
-		"`no apologies` " +
-		"`no filler` " +
-		"`just answer` " + `
-I will give you text content, you will rewrite it and output that in a short 
-summarized version of my text. Keep the meaning the same. Ensure that the 
-revised content has significantly fewer characters than the original text, 
-and no more than 500 Chinese words, the fewer the better.
-` +
-		`When generating text summaries, expand around the following topics as
-much as possible: %s` +
-		`Only give me the output and nothing else. Now, using the concepts above, 
-summarize the following text. Respond in Chinese language:
-`
-)
-
 func SummaryFile(customPrompt, filename string) (string, error) {
-	textChunks := ReadSRTFile(filename)
+	textChunks := ReadTextFile(filename)
 
 	fmt.Println("Total chunks of input file: ", len(textChunks))
-	summaryChunks, err := RecursiveSummary(fmt.Sprintf(prompt, customPrompt), textChunks, BaseChunkDepth)
+	var summaryChunks ChunkSlice
+	var err error
+	if customPrompt != "" {
+		summaryChunks, err = RecursiveSummary(fmt.Sprintf(generateSummaryPromptWithTopics, customPrompt), textChunks, BaseChunkDepth)
+	} else {
+		summaryChunks, err = RecursiveSummary(generateSummaryPrompt, textChunks, BaseChunkDepth)
+	}
 	if err != nil {
 		return "", err
 	}
