@@ -1,23 +1,15 @@
 package magictext
 
-import (
-	"fmt"
-)
-
-func MakeFilename(infile, ext string) string {
-	return fmt.Sprintf("%s.%s", infile, ext)
-}
-
 func CountTokens(text string) int {
-	token := TikToken.Encode(text, nil, nil)
-	return len(token)
+	tokens := TikToken.Encode(text, nil, nil)
+	return len(tokens)
 }
 
 func validateTokens(text string, maximum int) (int, bool) {
-	tokens := CountTokens(text)
-	if tokens > maximum {
-		return tokens, false
+	numOfTokens := CountTokens(text)
+	if numOfTokens > maximum {
+		return numOfTokens, false
 	}
 
-	return tokens, true
+	return numOfTokens, true
 }
