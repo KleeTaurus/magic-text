@@ -1,4 +1,5 @@
-# summary-it
+# magictext
+
 Generate a high-quality summary of a given text input.
 
 # TODO

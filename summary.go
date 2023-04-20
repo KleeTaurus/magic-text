@@ -27,8 +27,8 @@ func SummaryFile(topic, filename string) (string, error) {
 
 	summaryFile := MakeFilename(filename, "sum")
 	jsonFile := MakeFilename(filename, "json")
-	WriteTextFile(summaryFile, summaryChunks)
-	WriteJSONFile(jsonFile, append(textChunks, summaryChunks...))
+	DumpChunkToText(summaryFile, summaryChunks)
+	DumpChunkToJSON(jsonFile, append(textChunks, summaryChunks...))
 
 	return summaryFile, nil
 }
@@ -91,4 +91,8 @@ func getParentChunk(topic string, depth uint, groupChunks ChunkSlice) *Chunk {
 	}
 
 	return parentChunk
+}
+
+func MakeFilename(infile, ext string) string {
+	return fmt.Sprintf("%s.%s", infile, ext)
 }

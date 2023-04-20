@@ -11,8 +11,8 @@ import (
 )
 
 const (
-	MaxTokensInGenerateTitle = 512
-	MaxTokensInExtractNouns  = 2048
+	MaxTokens512  = 512
+	MaxTokens2048 = 2048
 )
 
 var (
@@ -45,8 +45,8 @@ func GenerateSummary(longtext string, topic string) []Summary {
 
 // GenerateTitle generates a title for the given text, the max length of input text is 512.
 func GenerateTitle(text string) (string, error) {
-	if tokens, ok := validateTokens(text, MaxTokensInGenerateTitle); !ok {
-		return "", fmt.Errorf("The maximum tokens supported is %d, got %d", MaxTokensInGenerateTitle, tokens)
+	if tokens, ok := validateTokens(text, MaxTokens512); !ok {
+		return "", fmt.Errorf("The maximum tokens supported is %d, got %d", MaxTokens512, tokens)
 	}
 
 	result, err := completionWithRetry(fmt.Sprintf(GenerateTitlePrompt, text))
@@ -70,14 +70,14 @@ func GenerateTitle(text string) (string, error) {
 //	   "book_names": ["万历十五年", "湘行散记", "货币未来"]
 //	}
 func ExtractNouns(text string) (string, error) {
-	if tokens, ok := validateTokens(text, MaxTokensInExtractNouns); !ok {
-		return "", fmt.Errorf("The maximum tokens supported is %d, got %d", MaxTokensInExtractNouns, tokens)
+	if tokens, ok := validateTokens(text, MaxTokens2048); !ok {
+		return "", fmt.Errorf("The maximum tokens supported is %d, got %d", MaxTokens2048, tokens)
 	}
 
-	jsonStr, err := completionWithRetry(fmt.Sprintf(ExtractNounsPrompt, text))
+	result, err := completionWithRetry(fmt.Sprintf(ExtractNounsPrompt, text))
 	if err != nil {
 		return "", err
 	}
 
-	return jsonStr, nil
+	return result, nil
 }
