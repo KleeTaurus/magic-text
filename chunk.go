@@ -1,4 +1,4 @@
-package summaryit
+package magictext
 
 import (
 	"crypto/md5"
