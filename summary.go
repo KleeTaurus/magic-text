@@ -78,7 +78,14 @@ func recursiveSummary(topic string, chunks ChunkSlice, depth uint) (ChunkSlice, 
 
 func getParentChunk(topic string, depth uint, groupChunks ChunkSlice) *Chunk {
 	log.Printf("%s, Generating text summary by openai.\n", groupChunks)
-	summary, err := completionWithRetry(fmt.Sprintf(GenerateSummaryPrompt, topic, groupChunks.TokenString()))
+	var prompt string
+	if topic != "" {
+		prompt = fmt.Sprintf(GenerateSummaryPromptWithTopic, topic, groupChunks.TokenString())
+	} else {
+		prompt = fmt.Sprintf(GenerateSummaryPrompt, groupChunks.TokenString())
+	}
+
+	summary, err := completionWithRetry(prompt)
 	if err != nil {
 		log.Printf("%s, Generating text summary failed, err: %v", groupChunks, err)
 		return NewSummaryChunk("", depth)

@@ -16,6 +16,7 @@ const (
 )
 
 var (
+	Debug        = false
 	OpenAIClient *openai.Client
 	TikToken     *tiktoken.Tiktoken
 )

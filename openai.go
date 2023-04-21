@@ -34,7 +34,9 @@ func retry(fn func(string) (string, error), prompt string, retryTimes int) (stri
 }
 
 func completion(prompt string) (string, error) {
-	// log.Println("prompt: ", prompt)
+	if Debug {
+		log.Printf("prompt:\n%s", prompt)
+	}
 
 	resp, err := OpenAIClient.CreateChatCompletion(
 		context.Background(),
@@ -52,6 +54,10 @@ func completion(prompt string) (string, error) {
 
 	if err != nil {
 		return "", err
+	}
+
+	if Debug {
+		log.Printf("response: %+v\n", resp.Choices)
 	}
 
 	return resp.Choices[0].Message.Content, nil
