@@ -109,7 +109,7 @@ func linesToChunks(lines Lines) ChunkSlice {
 			continue
 		}
 
-		if CountTokens(sb.String())+CountTokens(line) > MaxTokensPerRequest {
+		if CountTokens(sb.String())+CountTokens(line) > MaxTokens2048 {
 			chunks = append(chunks, NewTextChunk(sb.String()))
 			sb.Reset()
 		}

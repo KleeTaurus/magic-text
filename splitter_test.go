@@ -12,7 +12,7 @@ One of the most incredible breakthroughs that change how we work is the release 
 OpenAI provides an API for the GPT-3.5 model that we can use to develop a simple app, such as a text summarizer. To do that, we can use Python to integrate the model API into our intended application seamlessly. What does the process look like? Let’s get into it.
 `
 
-func TestSplit(t *testing.T) {
+func TestSplitText(t *testing.T) {
 	type args struct {
 		text         string
 		chunkSize    int
@@ -45,5 +45,10 @@ func TestSplit(t *testing.T) {
 				}
 			*/
 		})
+	}
+}
+func BenchmarkSplitText(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		SplitText(Paragraph, 140, 0)
 	}
 }

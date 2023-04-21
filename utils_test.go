@@ -26,7 +26,8 @@ func TestCountTokens(t *testing.T) {
 }
 
 func BenchmarkCountTokens(b *testing.B) {
+	text := "This is an era where AI breakthrough is coming daily. We didn’t have many AI-generated in public a few years ago, but now the technology is accessible to everyone. It’s excellent for many individual creators or companies that want to significantly take advantage of the technology to develop something complex, which might take a long time."
 	for i := 0; i < b.N; i++ {
-		CountTokens("Hello, world!")
+		CountTokens(text)
 	}
 }
