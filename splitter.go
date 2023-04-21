@@ -4,11 +4,41 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
+
+	"github.com/martinlindhe/subtitles"
 )
 
 var (
 	re = regexp.MustCompile("\\n+")
 )
+
+func SplitSubtitle(subtitle subtitles.Subtitle) ([]CaptionChunk, error) {
+	sb := strings.Builder{}
+	chunks := make([]CaptionChunk, 0, 21)
+
+	var start time.Time
+	for i, caption := range subtitle.Captions {
+		if i == 0 {
+			start = caption.Start
+		}
+
+		text := strings.Join(caption.Text, " ")
+		if CountTokens(sb.String()+text) > MaxTokens2048 {
+			chunks = append(chunks, NewCaptionChunk(start, sb.String()))
+
+			sb.Reset()
+			start = caption.Start
+		}
+		sb.WriteString(text + " ")
+
+		if i == len(subtitle.Captions)-1 && len(sb.String()) > 0 {
+			chunks = append(chunks, NewCaptionChunk(start, sb.String()))
+		}
+	}
+
+	return chunks, nil
+}
 
 func SplitText(text string, chunkSize, chunkOverlap int) ([]string, error) {
 	if chunkSize > MaxTokens2048 {
@@ -27,6 +57,7 @@ func SplitText(text string, chunkSize, chunkOverlap int) ([]string, error) {
 	texts := re.Split(text, -1)
 	chunks := make([]string, 0, tokens/chunkSize)
 	sb := strings.Builder{}
+
 	for _, text := range texts {
 		if strings.TrimSpace(text) == "" {
 			continue

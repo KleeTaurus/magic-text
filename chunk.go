@@ -4,6 +4,8 @@ import (
 	"crypto/md5"
 	"fmt"
 	"strings"
+	"time"
+	"unicode/utf8"
 )
 
 type Category int8
@@ -117,4 +119,32 @@ func FindTextChunks(chunks ChunkSlice, summaryDepth uint) ChunkSlice {
 	}
 
 	return textChunks
+}
+
+type CaptionChunk struct {
+	ID     string
+	From   time.Time
+	Text   string
+	Tokens int
+}
+
+func (c CaptionChunk) String() string {
+	text := c.Text
+	maxLength := 80
+	if utf8.RuneCountInString(c.Text) > maxLength {
+		text = fmt.Sprintf("%s...", string([]rune(c.Text)[:maxLength-3]))
+	}
+
+	return fmt.Sprintf("%s <%04d> %s %s", c.ID[:8], c.Tokens, c.From.Format("15:04:05"), text)
+}
+
+func NewCaptionChunk(from time.Time, text string) CaptionChunk {
+	text = strings.TrimSpace(text)
+
+	return CaptionChunk{
+		ID:     fmt.Sprintf("%x", md5.Sum([]byte(text))),
+		From:   from,
+		Text:   text,
+		Tokens: CountTokens(text),
+	}
 }
