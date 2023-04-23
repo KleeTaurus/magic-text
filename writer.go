@@ -2,6 +2,7 @@ package magictext
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"strconv"
 )
@@ -33,7 +34,7 @@ func DumpChunkToText(filename string, chunks ChunkSlice) error {
 	}
 	defer file.Close()
 
-	var preLevel uint = 0
+	var preLevel int = 0
 	for i, chunk := range chunks {
 		if i == 0 || chunk.Depth != preLevel {
 			text := "# LEVEL" + strconv.Itoa(int(chunk.Depth))
@@ -43,7 +44,7 @@ func DumpChunkToText(filename string, chunks ChunkSlice) error {
 			preLevel = chunk.Depth
 		}
 
-		if _, err := file.WriteString(chunk.Text + "\n\n"); err != nil {
+		if _, err := file.WriteString(fmt.Sprintf("%d %s", chunk.Seq, chunk.Text) + "\n\n"); err != nil {
 			return err
 		}
 	}

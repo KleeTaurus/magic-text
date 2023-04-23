@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	MaxRetryTimes = 5
+	MaxRetryTimes = 3
 	SleepSeconds  = 3
 )
 

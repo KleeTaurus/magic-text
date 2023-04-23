@@ -103,21 +103,24 @@ func linesToChunks(lines Lines) ChunkSlice {
 	chunks := make(ChunkSlice, 0, 30)
 	sb := strings.Builder{}
 
-	for _, line := range lines.text {
+	for i, line := range lines.text {
 		// ignore empty lines
 		if strings.TrimSpace(line) == "" {
 			continue
 		}
 
 		if CountTokens(sb.String())+CountTokens(line) > MaxTokens2048 {
-			chunks = append(chunks, NewTextChunk(sb.String()))
+			chunks = append(chunks, NewTextChunk(i, sb.String()))
 			sb.Reset()
 		}
 
 		// Here we separate the paragraph by a space
 		sb.WriteString(line + " ")
+
+		if i == len(lines.text)-1 {
+			chunks = append(chunks, NewTextChunk(i, sb.String()))
+		}
 	}
-	chunks = append(chunks, NewTextChunk(sb.String()))
 
 	return chunks
 }

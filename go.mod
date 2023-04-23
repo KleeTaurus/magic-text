@@ -18,3 +18,5 @@ require (
 	golang.org/x/net v0.0.0-20210119194325-5f4716e94777 // indirect
 	golang.org/x/sys v0.0.0-20201119102817-f84b799fce68 // indirect
 )
+
+// replace github.com/pkoukk/tiktoken-go => /Users/kevinlee/Projects/github.com/tiktoken-go

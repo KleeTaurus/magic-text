@@ -17,7 +17,8 @@ const (
 
 type Chunk struct {
 	Category Category `json:"category"`
-	Depth    uint     `json:"depth"`
+	Depth    int      `json:"depth"`
+	Seq      int      `json:"seq"`
 	ParentID string   `json:"parent_id"`
 	ID       string   `json:"id"`
 	Text     string   `json:"text"`
@@ -26,20 +27,22 @@ type Chunk struct {
 
 type ChunkSlice []*Chunk
 
-func NewTextChunk(text string) *Chunk {
+func NewTextChunk(seq int, text string) *Chunk {
 	return &Chunk{
-		Depth:    0,
 		Category: CatText,
+		Depth:    0,
+		Seq:      seq,
 		Text:     text,
 		ID:       fmt.Sprintf("%x", md5.Sum([]byte(text))),
 		Tokens:   CountTokens(text),
 	}
 }
 
-func NewSummaryChunk(summary string, depth uint) *Chunk {
+func NewSummaryChunk(seq int, summary string, depth int) *Chunk {
 	return &Chunk{
-		Depth:    depth,
 		Category: CatSummary,
+		Depth:    depth,
+		Seq:      seq,
 		Text:     summary,
 		ID:       fmt.Sprintf("%x", md5.Sum([]byte(summary))),
 		Tokens:   CountTokens(summary),
@@ -47,7 +50,7 @@ func NewSummaryChunk(summary string, depth uint) *Chunk {
 }
 
 func (c *Chunk) String() string {
-	return fmt.Sprintf("%d:%d:%s:%s:%d", c.Category, c.Depth, c.ParentID, c.ID, c.Tokens)
+	return fmt.Sprintf("%d:%d:%d:%s:%s:%d", c.Category, c.Depth, c.Seq, c.ParentID, c.ID, c.Tokens)
 }
 
 func (cs ChunkSlice) Tokens() int {
@@ -83,7 +86,7 @@ func (cs ChunkSlice) SubGroups(maxTokensPerRequest, maxChunksInGroup int) []Chun
 
 func (cs ChunkSlice) String() string {
 	cm := make(map[Category]bool)
-	dm := make(map[uint]bool)
+	dm := make(map[int]bool)
 
 	for _, chunk := range cs {
 		if _, ok := cm[chunk.Category]; !ok {
@@ -109,7 +112,7 @@ func getChildChunk(chunks ChunkSlice, chunkID string) *Chunk {
 	return nil
 }
 
-func FindTextChunks(chunks ChunkSlice, summaryDepth uint) ChunkSlice {
+func FindTextChunks(chunks ChunkSlice, summaryDepth int) ChunkSlice {
 	textChunks := make(ChunkSlice, 0, 21)
 	for _, chunk := range chunks {
 		if chunk.Category == CatSummary && chunk.Depth == summaryDepth {
