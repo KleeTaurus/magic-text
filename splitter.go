@@ -18,6 +18,7 @@ func SplitSubtitle(subtitle subtitles.Subtitle) ([]CaptionChunk, error) {
 	chunks := make([]CaptionChunk, 0, 21)
 
 	var start time.Time
+	seq := 0
 	for i, caption := range subtitle.Captions {
 		if i == 0 {
 			start = caption.Start
@@ -25,7 +26,8 @@ func SplitSubtitle(subtitle subtitles.Subtitle) ([]CaptionChunk, error) {
 
 		text := strings.Join(caption.Text, " ")
 		if CountTokens(sb.String()+text) > MaxTokens2048 {
-			chunks = append(chunks, NewCaptionChunk(start, sb.String()))
+			chunks = append(chunks, NewCaptionChunk(seq, sb.String(), start))
+			seq++
 
 			sb.Reset()
 			start = caption.Start
@@ -33,7 +35,8 @@ func SplitSubtitle(subtitle subtitles.Subtitle) ([]CaptionChunk, error) {
 		sb.WriteString(text + " ")
 
 		if i == len(subtitle.Captions)-1 && len(sb.String()) > 0 {
-			chunks = append(chunks, NewCaptionChunk(start, sb.String()))
+			chunks = append(chunks, NewCaptionChunk(seq, sb.String(), start))
+			seq++
 		}
 	}
 

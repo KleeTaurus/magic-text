@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/joho/godotenv"
+	"github.com/martinlindhe/subtitles"
 	"github.com/pkoukk/tiktoken-go"
 	"github.com/sashabaranov/go-openai"
 )
@@ -39,9 +40,70 @@ func init() {
 	}
 }
 
-// GenerateSummary generates a summary for the given text
-func GenerateSummary(longtext string, topic string) []Summary {
-	return []Summary{}
+// GenerateSummaryBySubtitle generates a summary for the given subtitles
+func GenerateSummaryBySubtitle(topic string, subtitle subtitles.Subtitle) ([]SubtitleSummary, string, error) {
+	subtitleSummaries := make([]SubtitleSummary, 0, 11)
+
+	// Split subtitle into caption chunks
+	captionChunks, err := SplitSubtitle(subtitle)
+	if err != nil {
+		return subtitleSummaries, "", err
+	}
+
+	randomFile := randomFilename()
+	captionChunkFile := "/tmp/" + randomFile + ".1.json"
+	DumpChunksToJSON(captionChunkFile, captionChunks)
+
+	captionMap := make(map[string]CaptionChunk, 0)
+	textChunks := make(ChunkSlice, 0, len(captionChunks))
+	for i, cc := range captionChunks {
+		textChunks = append(textChunks, NewTextChunk(i, cc.Text))
+		captionMap[cc.ID] = cc
+	}
+
+	textChunkFile := "/tmp/" + randomFile + ".2.json"
+	DumpChunksToJSON(textChunkFile, textChunks)
+
+	fmt.Println("Total text chunks: ", len(textChunks))
+	summaryChunks, err := recursiveSummary(topic, textChunks, 0)
+	if err != nil {
+		return subtitleSummaries, "", err
+	}
+
+	summaryChunkFile := "/tmp/" + randomFile + ".3.json"
+	DumpChunksToJSON(summaryChunkFile, summaryChunks)
+
+	var summary string
+	for i, sumChunk := range summaryChunks {
+		if i == len(summaryChunks)-1 {
+			summary = sumChunk.Text
+		}
+
+		// we only want level 1 chunks
+		if sumChunk.Depth != 1 {
+			continue
+		}
+
+		ps := SubtitleSummary{}
+		ps.ID = sumChunk.ID
+		ps.Seq = sumChunk.Seq
+		ps.Text = sumChunk.Text
+
+		for _, c := range summaryChunks {
+			if ps.ID == c.ParentID {
+				for _, t := range textChunks {
+					if c.ID == t.ParentID {
+						if cc, ok := captionMap[t.ID]; ok {
+							ps.From = cc.From
+						}
+					}
+				}
+			}
+		}
+		subtitleSummaries = append(subtitleSummaries, ps)
+	}
+
+	return subtitleSummaries, summary, nil
 }
 
 // GenerateTitle generates a title for the given text, the max length of input text is 512.

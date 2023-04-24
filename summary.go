@@ -5,65 +5,24 @@ import (
 	"log"
 	"sort"
 	"sync"
-
-	"github.com/martinlindhe/subtitles"
+	"time"
 )
 
-type Summary struct{}
+type Summary struct {
+	ID   string
+	Seq  int
+	Text string
+}
+
+type SubtitleSummary struct {
+	From time.Time
+	Summary
+}
 
 const (
 	MaxGroupChunks = 3
 	MaxConcurrent  = 5
-	BaseChunkDepth = 0
 )
-
-func SummaryFile(topic, filename string) (string, error) {
-	textChunks := ReadSRTFile(filename)
-
-	fmt.Println("Total chunks of input file: ", len(textChunks))
-	summaryChunks, err := recursiveSummary(topic, textChunks, BaseChunkDepth)
-	if err != nil {
-		return "", err
-	}
-
-	summaryFile := MakeFilename(filename, "sum")
-	jsonFile := MakeFilename(filename, "json")
-	DumpChunkToText(summaryFile, summaryChunks)
-	DumpChunkToJSON(jsonFile, append(textChunks, summaryChunks...))
-
-	return summaryFile, nil
-}
-
-func SummaryText(topic string, text string) (string, error) {
-	return "", nil
-}
-
-func SummarySubtitle(topic string, subtitle subtitles.Subtitle) (string, error) {
-	captionChunks, err := SplitSubtitle(subtitle)
-	if err != nil {
-		return "", err
-	}
-
-	textChunks := make(ChunkSlice, 0, len(captionChunks))
-	for i, cc := range captionChunks {
-		textChunks = append(textChunks, NewTextChunk(i, cc.Text))
-	}
-	fmt.Println(len(captionChunks))
-
-	fmt.Println("Total chunks of input file: ", len(textChunks))
-	summaryChunks, err := recursiveSummary(topic, textChunks, BaseChunkDepth)
-	if err != nil {
-		return "", err
-	}
-
-	filename := "/tmp/abc"
-	summaryFile := MakeFilename(filename, "sum")
-	jsonFile := MakeFilename(filename, "json")
-	DumpChunkToText(summaryFile, summaryChunks)
-	DumpChunkToJSON(jsonFile, append(textChunks, summaryChunks...))
-
-	return summaryFile, nil
-}
 
 func recursiveSummary(topic string, chunks ChunkSlice, depth int) (ChunkSlice, error) {
 	parentChunksMap := make(map[int]*Chunk)
@@ -130,8 +89,4 @@ func getParentChunk(seq int, topic string, depth int, groupChunks ChunkSlice) *C
 	}
 
 	return parentChunk
-}
-
-func MakeFilename(infile, ext string) string {
-	return fmt.Sprintf("%s.%s", infile, ext)
 }

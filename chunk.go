@@ -100,35 +100,41 @@ func (cs ChunkSlice) String() string {
 	return fmt.Sprintf("Category: %v, Depth: %v, Childs: %d, Total Tokens: %d", cm, dm, len(cs), cs.Tokens())
 }
 
-func getChildChunk(chunks ChunkSlice, chunkID string) *Chunk {
-	for _, chunk := range chunks {
-		if chunk.ParentID == chunkID {
-			if chunk.Category != CatText {
-				return getChildChunk(chunks, chunk.ID)
-			}
-			return chunk
-		}
-	}
-	return nil
+func NewTextChunk2(seq int, text string) TextChunk {
+	text = strings.TrimSpace(text)
+
+	tc := TextChunk{}
+	tc.Seq = seq
+	tc.Text = text
+	tc.ID = fmt.Sprintf("%x", md5.Sum([]byte(text)))
+	tc.Tokens = CountTokens(text)
+
+	return tc
 }
 
-func FindTextChunks(chunks ChunkSlice, summaryDepth int) ChunkSlice {
-	textChunks := make(ChunkSlice, 0, 21)
-	for _, chunk := range chunks {
-		if chunk.Category == CatSummary && chunk.Depth == summaryDepth {
-			textChunk := getChildChunk(chunks, chunk.ID)
-			textChunks = append(textChunks, textChunk)
-		}
-	}
+type TextChunk struct {
+	ID     string `json:"id"`
+	Seq    int    `json:"seq"`
+	Text   string `json:"text"`
+	Tokens int    `json:"tokens"`
+}
 
-	return textChunks
+func NewCaptionChunk(seq int, text string, from time.Time) CaptionChunk {
+	text = strings.TrimSpace(text)
+
+	cc := CaptionChunk{}
+	cc.Seq = seq
+	cc.Text = text
+	cc.From = from
+	cc.ID = fmt.Sprintf("%x", md5.Sum([]byte(text)))
+	cc.Tokens = CountTokens(text)
+
+	return cc
 }
 
 type CaptionChunk struct {
-	ID     string
-	From   time.Time
-	Text   string
-	Tokens int
+	From time.Time `json:"from"`
+	TextChunk
 }
 
 func (c CaptionChunk) String() string {
@@ -139,15 +145,4 @@ func (c CaptionChunk) String() string {
 	}
 
 	return fmt.Sprintf("%s <%04d> %s %s", c.ID[:8], c.Tokens, c.From.Format("15:04:05"), text)
-}
-
-func NewCaptionChunk(from time.Time, text string) CaptionChunk {
-	text = strings.TrimSpace(text)
-
-	return CaptionChunk{
-		ID:     fmt.Sprintf("%x", md5.Sum([]byte(text))),
-		From:   from,
-		Text:   text,
-		Tokens: CountTokens(text),
-	}
 }

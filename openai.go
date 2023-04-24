@@ -38,6 +38,10 @@ func completion(prompt string) (string, error) {
 		log.Printf("prompt:\n%s", prompt)
 	}
 
+	if true {
+		return "fake content", nil
+	}
+
 	resp, err := OpenAIClient.CreateChatCompletion(
 		context.Background(),
 		openai.ChatCompletionRequest{
