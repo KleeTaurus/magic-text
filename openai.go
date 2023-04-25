@@ -38,9 +38,11 @@ func completion(prompt string) (string, error) {
 		log.Printf("prompt:\n%s", prompt)
 	}
 
-	if true {
-		return "fake content", nil
-	}
+	/*
+		if true {
+			return fmt.Sprintf("fake content, now = %v", time.Now()), nil
+		}
+	*/
 
 	resp, err := OpenAIClient.CreateChatCompletion(
 		context.Background(),

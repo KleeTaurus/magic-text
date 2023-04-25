@@ -1,6 +1,8 @@
 package magictext
 
 import (
+	"crypto/md5"
+	"fmt"
 	"strconv"
 	"time"
 )
@@ -21,4 +23,8 @@ func validateTokens(text string, maximum int) (int, bool) {
 
 func randomFilename() string {
 	return strconv.FormatInt(time.Now().UnixNano(), 10)
+}
+
+func hashString(text string) string {
+	return fmt.Sprintf("%x", md5.Sum([]byte(text)))
 }

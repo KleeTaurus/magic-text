@@ -4,12 +4,24 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/joho/godotenv"
 	"github.com/martinlindhe/subtitles"
 	"github.com/pkoukk/tiktoken-go"
 	"github.com/sashabaranov/go-openai"
 )
+
+type Summary struct {
+	ID   string
+	Seq  int
+	Text string
+}
+
+type SubtitleSummary struct {
+	From time.Time
+	Summary
+}
 
 const (
 	MaxTokens512  = 512
@@ -41,8 +53,8 @@ func init() {
 }
 
 // GenerateSummaryBySubtitle generates a summary for the given subtitles
-func GenerateSummaryBySubtitle(topic string, subtitle subtitles.Subtitle) ([]SubtitleSummary, string, error) {
-	subtitleSummaries := make([]SubtitleSummary, 0, 11)
+func GenerateSummaryBySubtitle(topic string, subtitle subtitles.Subtitle) ([]*SubtitleSummary, string, error) {
+	subtitleSummaries := make([]*SubtitleSummary, 0, 11)
 
 	// Split subtitle into caption chunks
 	captionChunks, err := SplitSubtitle(subtitle)
@@ -50,60 +62,47 @@ func GenerateSummaryBySubtitle(topic string, subtitle subtitles.Subtitle) ([]Sub
 		return subtitleSummaries, "", err
 	}
 
-	randomFile := randomFilename()
-	captionChunkFile := "/tmp/" + randomFile + ".1.json"
-	DumpChunksToJSON(captionChunkFile, captionChunks)
-
-	captionMap := make(map[string]CaptionChunk, 0)
-	textChunks := make(ChunkSlice, 0, len(captionChunks))
+	captionChunksMap := make(map[string]CaptionChunk, 0)
+	chunks := make(ChunkSlice, 0, len(captionChunks))
 	for i, cc := range captionChunks {
-		textChunks = append(textChunks, NewTextChunk(i, cc.Text))
-		captionMap[cc.ID] = cc
+		chunks = append(chunks, NewChunk(i, cc.Text))
+		captionChunksMap[cc.ID] = cc
 	}
 
-	textChunkFile := "/tmp/" + randomFile + ".2.json"
-	DumpChunksToJSON(textChunkFile, textChunks)
-
-	fmt.Println("Total text chunks: ", len(textChunks))
-	summaryChunks, err := recursiveSummary(topic, textChunks, 0)
+	log.Println("Total chunks: ", len(chunks))
+	summaryChunk, err := generateSummary(topic, chunks)
 	if err != nil {
 		return subtitleSummaries, "", err
 	}
 
-	summaryChunkFile := "/tmp/" + randomFile + ".3.json"
-	DumpChunksToJSON(summaryChunkFile, summaryChunks)
+	randomFile := randomFilename()
+	DumpChunksToJSON("/tmp/"+randomFile+"_1.json", captionChunks)
+	DumpChunksToJSON("/tmp/"+randomFile+"_2.json", chunks)
+	DumpChunksToJSON("/tmp/"+randomFile+"_3.json", summaryChunk)
 
-	var summary string
-	for i, sumChunk := range summaryChunks {
-		if i == len(summaryChunks)-1 {
-			summary = sumChunk.Text
+	summary := summaryChunk.Text
+	for _, chunk := range summaryChunk.Children {
+		ss := &SubtitleSummary{}
+		ss.ID = chunk.ID
+		ss.Seq = chunk.Seq
+		ss.Text = chunk.Text
+
+		leafChunk := getFirstLeafChunk(chunk)
+		if cc, ok := captionChunksMap[leafChunk.ID]; ok {
+			ss.From = cc.From
 		}
 
-		// we only want level 1 chunks
-		if sumChunk.Depth != 1 {
-			continue
-		}
-
-		ps := SubtitleSummary{}
-		ps.ID = sumChunk.ID
-		ps.Seq = sumChunk.Seq
-		ps.Text = sumChunk.Text
-
-		for _, c := range summaryChunks {
-			if ps.ID == c.ParentID {
-				for _, t := range textChunks {
-					if c.ID == t.ParentID {
-						if cc, ok := captionMap[t.ID]; ok {
-							ps.From = cc.From
-						}
-					}
-				}
-			}
-		}
-		subtitleSummaries = append(subtitleSummaries, ps)
+		subtitleSummaries = append(subtitleSummaries, ss)
 	}
 
 	return subtitleSummaries, summary, nil
+}
+
+func getFirstLeafChunk(target *Chunk) *Chunk {
+	if len(target.Children) == 0 {
+		return target
+	}
+	return getFirstLeafChunk(target.Children[0])
 }
 
 // GenerateTitle generates a title for the given text, the max length of input text is 512.

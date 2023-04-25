@@ -26,7 +26,7 @@ func DumpChunksToJSON(filename string, chunks interface{}) error {
 	return nil
 }
 
-func DumpSummary(filename, summary string, captionSummaries []SubtitleSummary) error {
+func DumpSummary(filename, summary string, captionSummaries []*SubtitleSummary) error {
 	file, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
 		return err

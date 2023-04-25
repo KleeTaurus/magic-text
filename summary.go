@@ -3,71 +3,46 @@ package magictext
 import (
 	"fmt"
 	"log"
-	"sort"
-	"sync"
-	"time"
 )
-
-type Summary struct {
-	ID   string
-	Seq  int
-	Text string
-}
-
-type SubtitleSummary struct {
-	From time.Time
-	Summary
-}
 
 const (
-	MaxGroupChunks = 3
-	MaxConcurrent  = 5
+	MaxChunksPerGroup = 3 // TODO: this variable should be calculated dynamically
+	MaxConcurrent     = 5
+	BaseHeight        = 0
 )
 
-func recursiveSummary(topic string, chunks ChunkSlice, depth int) (ChunkSlice, error) {
-	parentChunksMap := make(map[int]*Chunk)
-	limiter := make(chan struct{}, MaxConcurrent)
-	var wg sync.WaitGroup
-
-	for i, chunkGroup := range chunks.SubGroups(MaxTokens2048, MaxGroupChunks) {
-		limiter <- struct{}{}
-		wg.Add(1)
-
-		go func(chunkGroup ChunkSlice, i int, parentChunksMap map[int]*Chunk) {
-			defer func() {
-				<-limiter
-				wg.Done()
-			}()
-
-			parentChunk := getParentChunk(i, topic, depth, chunkGroup)
-			parentChunksMap[i] = parentChunk
-		}(chunkGroup, i, parentChunksMap)
-	}
-	wg.Wait()
-
-	keys := make([]int, 0, len(parentChunksMap))
-	for key := range parentChunksMap {
-		keys = append(keys, key)
-	}
-	sort.Ints(keys)
-
-	parentChunks := make(ChunkSlice, 0, len(keys))
-	for key := range keys {
-		parentChunks = append(parentChunks, parentChunksMap[key])
-	}
-
-	if len(parentChunks) > 1 {
-		grandParentChunks, err := recursiveSummary(topic, parentChunks, depth+1)
-		if err != nil {
-			return nil, err
-		}
-		parentChunks = append(parentChunks, grandParentChunks...)
-	}
-
-	return parentChunks, nil
+func generateSummary(topic string, chunks ChunkSlice) (*Chunk, error) {
+	return summarizeRecursively(topic, chunks, BaseHeight)
 }
 
-func getParentChunk(seq int, topic string, depth int, groupChunks ChunkSlice) *Chunk {
+func summarizeRecursively(topic string, chunks ChunkSlice, height int) (*Chunk, error) {
+	summarizedChunksMap := make(map[int]*Chunk)
+
+	chunkGroups := groupChunks(chunks, MaxTokens2048, height*MaxChunksPerGroup)
+	for i, chunkGroup := range chunkGroups {
+		func(seq int, chunkGroup ChunkSlice) {
+			summary, _ := summarizeChunks(topic, chunkGroup)
+			summarizedChunk := NewChunk(seq, summary)
+			summarizedChunk.Height = height + 1
+			summarizedChunk.Children = chunkGroup
+
+			summarizedChunksMap[i] = summarizedChunk
+		}(i, chunkGroup)
+	}
+
+	summarizedChunks := make(ChunkSlice, 0, len(summarizedChunksMap))
+	for i := 0; i < len(summarizedChunksMap); i++ {
+		summarizedChunks = append(summarizedChunks, summarizedChunksMap[i])
+	}
+
+	if len(summarizedChunks) == 1 {
+		return summarizedChunks[0], nil
+	}
+
+	return summarizeRecursively(topic, summarizedChunks, height+1)
+}
+
+func summarizeChunks(topic string, groupChunks ChunkSlice) (string, error) {
 	log.Printf("%s, Generating text summary by openai.\n", groupChunks)
 	var prompt string
 	if topic != "" {
@@ -79,14 +54,31 @@ func getParentChunk(seq int, topic string, depth int, groupChunks ChunkSlice) *C
 	summary, err := completionWithRetry(prompt)
 	if err != nil {
 		log.Printf("%s, Generating text summary failed, err: %v", groupChunks, err)
-		return NewSummaryChunk(seq, "", depth)
+		return "", err
 	}
 
-	parentChunk := NewSummaryChunk(seq, summary, depth)
-	// Update the child chunk's parent id
-	for _, chunk := range groupChunks {
-		chunk.ParentID = parentChunk.ID
+	return summary, nil
+}
+
+func groupChunks(cs ChunkSlice, maxTokensPerRequest, maxChunksInGroup int) []ChunkSlice {
+	groups := make([]ChunkSlice, 0, len(cs)/2)
+	chunkGroup := make(ChunkSlice, 0, maxChunksInGroup)
+	for _, chunk := range cs {
+		if chunkGroup.Tokens()+chunk.Tokens > maxTokensPerRequest || len(chunkGroup) > maxChunksInGroup {
+			groups = append(groups, chunkGroup)
+			// reset chunkGroup to empty
+			chunkGroup = make(ChunkSlice, 0, maxChunksInGroup)
+		}
+		chunkGroup = append(chunkGroup, chunk)
+	}
+	groups = append(groups, chunkGroup)
+	return groups
+}
+
+func calculateMaxChunksInGroup(cs ChunkSlice) int {
+	if len(cs) < 11 {
+		return 11
 	}
 
-	return parentChunk
+	return 11
 }

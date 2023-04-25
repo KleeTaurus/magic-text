@@ -6,11 +6,11 @@ import (
 	"testing"
 )
 
-func TestChunkSlice_SubGroups(t *testing.T) {
+func TestChunkSlice_groupChunks(t *testing.T) {
 	size := 9
 	chunks := make(ChunkSlice, 0, size)
 	for i := 0; i < size; i++ {
-		chunks = append(chunks, NewTextChunk(i, fmt.Sprintf("This is a chunk %d", i)))
+		chunks = append(chunks, NewChunk(i, fmt.Sprintf("This is a chunk %d", i)))
 	}
 
 	type args struct {
@@ -36,7 +36,7 @@ func TestChunkSlice_SubGroups(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.cs.SubGroups(tt.args.maxTokensPerRequest, tt.args.maxChunksInGroup); !reflect.DeepEqual(got, tt.want) {
+			if got := groupChunks(tt.cs, tt.args.maxTokensPerRequest, tt.args.maxChunksInGroup); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("ChunkSlice.SubGroups() = %v, want %v", got, tt.want)
 			}
 		})
