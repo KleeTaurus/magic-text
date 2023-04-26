@@ -18,7 +18,15 @@ func generateSummary(topic string, chunks ChunkSlice) (*Chunk, error) {
 func summarizeRecursively(topic string, chunks ChunkSlice, height int) (*Chunk, error) {
 	summarizedChunksMap := make(map[int]*Chunk)
 
-	chunkGroups := groupChunks(chunks, MaxTokens2048, height*MaxChunksPerGroup)
+	maxChunksPerGroup := MaxChunksPerGroup
+	if height > 0 {
+		// height 0, max = 3
+		// height 1, max = 3
+		// height 2, max = 6
+		// height 3, max = 9
+		maxChunksPerGroup *= height
+	}
+	chunkGroups := groupChunks(chunks, MaxTokens2048, maxChunksPerGroup)
 	for i, chunkGroup := range chunkGroups {
 		func(seq int, chunkGroup ChunkSlice) {
 			summary, _ := summarizeChunks(topic, chunkGroup)
@@ -64,7 +72,7 @@ func groupChunks(cs ChunkSlice, maxTokensPerRequest, maxChunksInGroup int) []Chu
 	groups := make([]ChunkSlice, 0, len(cs)/2)
 	chunkGroup := make(ChunkSlice, 0, maxChunksInGroup)
 	for _, chunk := range cs {
-		if chunkGroup.Tokens()+chunk.Tokens > maxTokensPerRequest || len(chunkGroup) > maxChunksInGroup {
+		if chunkGroup.Tokens()+chunk.Tokens > maxTokensPerRequest || len(chunkGroup) >= maxChunksInGroup {
 			groups = append(groups, chunkGroup)
 			// reset chunkGroup to empty
 			chunkGroup = make(ChunkSlice, 0, maxChunksInGroup)
@@ -73,12 +81,4 @@ func groupChunks(cs ChunkSlice, maxTokensPerRequest, maxChunksInGroup int) []Chu
 	}
 	groups = append(groups, chunkGroup)
 	return groups
-}
-
-func calculateMaxChunksInGroup(cs ChunkSlice) int {
-	if len(cs) < 11 {
-		return 11
-	}
-
-	return 11
 }

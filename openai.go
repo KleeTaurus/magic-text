@@ -34,21 +34,20 @@ func retry(fn func(string) (string, error), prompt string, retryTimes int) (stri
 }
 
 func completion(prompt string) (string, error) {
+	if MockOpenAI {
+		return fmt.Sprintf("fake content, now = %v", time.Now()), nil
+	}
+
 	if Debug {
 		log.Printf("prompt:\n%s", prompt)
 	}
-
-	/*
-		if true {
-			return fmt.Sprintf("fake content, now = %v", time.Now()), nil
-		}
-	*/
 
 	resp, err := OpenAIClient.CreateChatCompletion(
 		context.Background(),
 		openai.ChatCompletionRequest{
 			Model:       openai.GPT3Dot5Turbo,
-			Temperature: 0,
+			MaxTokens:   250,
+			Temperature: 0.2,
 			Messages: []openai.ChatCompletionMessage{
 				{
 					Role:    openai.ChatMessageRoleUser,

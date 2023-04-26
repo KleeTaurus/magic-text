@@ -30,6 +30,7 @@ const (
 
 var (
 	Debug        = false
+	MockOpenAI   = false
 	OpenAIClient *openai.Client
 	TikToken     *tiktoken.Tiktoken
 )
@@ -62,6 +63,8 @@ func GenerateSummaryBySubtitle(topic string, subtitle subtitles.Subtitle) ([]*Su
 		return subtitleSummaries, "", err
 	}
 
+	// Save caption chunks into a map, so we can get start time
+	// by content hash id
 	captionChunksMap := make(map[string]CaptionChunk, 0)
 	chunks := make(ChunkSlice, 0, len(captionChunks))
 	for i, cc := range captionChunks {
@@ -70,7 +73,7 @@ func GenerateSummaryBySubtitle(topic string, subtitle subtitles.Subtitle) ([]*Su
 	}
 
 	log.Println("Total chunks: ", len(chunks))
-	summaryChunk, err := generateSummary(topic, chunks)
+	rootChunk, err := generateSummary(topic, chunks)
 	if err != nil {
 		return subtitleSummaries, "", err
 	}
@@ -78,31 +81,33 @@ func GenerateSummaryBySubtitle(topic string, subtitle subtitles.Subtitle) ([]*Su
 	randomFile := randomFilename()
 	DumpChunksToJSON("/tmp/"+randomFile+"_1.json", captionChunks)
 	DumpChunksToJSON("/tmp/"+randomFile+"_2.json", chunks)
-	DumpChunksToJSON("/tmp/"+randomFile+"_3.json", summaryChunk)
+	DumpChunksToJSON("/tmp/"+randomFile+"_3.json", rootChunk)
 
-	summary := summaryChunk.Text
-	for _, chunk := range summaryChunk.Children {
-		ss := &SubtitleSummary{}
-		ss.ID = chunk.ID
-		ss.Seq = chunk.Seq
-		ss.Text = chunk.Text
+	summary := rootChunk.Text
+	for _, child := range rootChunk.Children {
+		for _, grandchild := range child.Children {
+			ss := &SubtitleSummary{}
+			ss.ID = grandchild.ID
+			ss.Seq = grandchild.Seq
+			ss.Text = grandchild.Text
 
-		leafChunk := getFirstLeafChunk(chunk)
-		if cc, ok := captionChunksMap[leafChunk.ID]; ok {
-			ss.From = cc.From
+			leaf := getLeafChunk(grandchild)
+			if cc, ok := captionChunksMap[leaf.ID]; ok {
+				ss.From = cc.From
+			}
+
+			subtitleSummaries = append(subtitleSummaries, ss)
 		}
-
-		subtitleSummaries = append(subtitleSummaries, ss)
 	}
 
 	return subtitleSummaries, summary, nil
 }
 
-func getFirstLeafChunk(target *Chunk) *Chunk {
+func getLeafChunk(target *Chunk) *Chunk {
 	if len(target.Children) == 0 {
 		return target
 	}
-	return getFirstLeafChunk(target.Children[0])
+	return getLeafChunk(target.Children[0])
 }
 
 // GenerateTitle generates a title for the given text, the max length of input text is 512.

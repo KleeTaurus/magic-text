@@ -2,7 +2,6 @@ package magictext
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -21,10 +20,12 @@ type ChunkSlice []*Chunk
 
 func NewChunk(seq int, text string) *Chunk {
 	return &Chunk{
-		Seq:    seq,
-		Text:   text,
-		ID:     hashString(text),
-		Tokens: CountTokens(text),
+		Seq:      seq,
+		Height:   0,
+		Text:     text,
+		ID:       hashString(text),
+		Tokens:   CountTokens(text),
+		Children: []*Chunk{},
 	}
 }
 
@@ -49,19 +50,20 @@ func (cs ChunkSlice) TokenString() string {
 }
 
 func (cs ChunkSlice) String() string {
-	dm := make(map[int]bool)
+	heightMap := make(map[int]bool)
+	heights := []string{}
+	seqs := []string{}
 
 	for _, chunk := range cs {
-		if _, ok := dm[chunk.Height]; !ok {
-			dm[chunk.Height] = true
+		seqs = append(seqs, fmt.Sprintf("%02d", chunk.Seq))
+		if _, ok := heightMap[chunk.Height]; !ok {
+			heightMap[chunk.Height] = true
+			heights = append(heights, fmt.Sprintf("%d", chunk.Height))
 		}
 	}
 
-	sb := strings.Builder{}
-	for k := range dm {
-		sb.WriteString(strconv.Itoa(k))
-	}
-	return fmt.Sprintf("Height: %s, Children: %d, Total Tokens: %d", sb.String(), len(cs), cs.Tokens())
+	return fmt.Sprintf("Height: %s, Seqs: %s, Children: %d, Total Tokens: %d",
+		strings.Join(heights, "_"), strings.Join(seqs, "_"), len(cs), cs.Tokens())
 }
 
 type TextChunk struct {
