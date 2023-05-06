@@ -36,7 +36,7 @@ func retry(fn func(string) (string, error), prompt string, retryTimes int) (stri
 func completion(prompt string) (string, error) {
 	if MockOpenAI {
 		// return "", fmt.Errorf("Mock OpenAI failed")
-		time.Sleep(time.Second * 2)
+		time.Sleep(time.Second * 1 / 2)
 		return fmt.Sprintf("fake content, %s", randString()), nil
 	}
 

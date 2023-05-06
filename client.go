@@ -42,6 +42,10 @@ func (cs CaptionSummary) FromString() string {
 	return cs.From.Format("15:04:05")
 }
 
+func (cs CaptionSummary) ToString() string {
+	return cs.To.Format("15:04:05")
+}
+
 type TextChunk struct {
 	ID     string `json:"id"`
 	Seq    int    `json:"seq"`
@@ -51,10 +55,11 @@ type TextChunk struct {
 
 type CaptionChunk struct {
 	From time.Time `json:"from"`
+	To   time.Time `json:"to"`
 	TextChunk
 }
 
-func NewCaptionChunk(seq int, text string, from time.Time) *CaptionChunk {
+func NewCaptionChunk(seq int, text string, from, to time.Time) *CaptionChunk {
 	text = strings.TrimSpace(text)
 
 	cc := CaptionChunk{}
@@ -62,6 +67,7 @@ func NewCaptionChunk(seq int, text string, from time.Time) *CaptionChunk {
 	cc.Seq = seq
 	cc.Text = text
 	cc.From = from
+	cc.To = to
 	cc.Tokens = CountTokens(text)
 
 	return &cc
@@ -133,9 +139,12 @@ func GenerateSummaryBySubtitle(topic string, subtitle subtitles.Subtitle) ([]*Ca
 			ss.Seq = grandchild.Seq
 			ss.Text = grandchild.Text
 
-			leafFrom := getLeafChunk(grandchild)
+			leafFrom, leafTo := getLeafChunk(grandchild, true), getLeafChunk(grandchild, false)
 			if cc, ok := captionChunksMap[leafFrom.ID]; ok {
 				ss.From = cc.From
+			}
+			if cc, ok := captionChunksMap[leafTo.ID]; ok {
+				ss.To = cc.To
 			}
 
 			subtitleSummaries = append(subtitleSummaries, ss)
@@ -145,12 +154,16 @@ func GenerateSummaryBySubtitle(topic string, subtitle subtitles.Subtitle) ([]*Ca
 	return subtitleSummaries, summary, nil
 }
 
-func getLeafChunk(target *Chunk) *Chunk {
+func getLeafChunk(target *Chunk, isFirst bool) *Chunk {
 	if len(target.Children) == 0 {
 		return target
 	}
 
-	return getLeafChunk(target.Children[0])
+	if isFirst {
+		return getLeafChunk(target.Children[0], isFirst)
+	}
+
+	return getLeafChunk(target.Children[len(target.Children)-1], isFirst)
 }
 
 // GenerateTitle generates a title for the given text, the max length of input text is 512.
