@@ -26,7 +26,7 @@ func DumpChunksToJSON(filename string, chunks interface{}) error {
 	return nil
 }
 
-func DumpSummary(filename, summary string, captionSummaries []*SubtitleSummary) error {
+func DumpSummary(filename, summary string, captionSummaries []*CaptionSummary) error {
 	file, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
 		return err
@@ -36,7 +36,7 @@ func DumpSummary(filename, summary string, captionSummaries []*SubtitleSummary) 
 	file.WriteString(summary + "\n\n")
 
 	for _, cs := range captionSummaries {
-		header := fmt.Sprintf("Seq: %d, ID: %s, Start: %s", cs.Seq, cs.ID, cs.From.Format("15:04:05"))
+		header := fmt.Sprintf("ID: %s, Seq: %d, Start: %s", cs.ID, cs.Seq, cs.FromString())
 		if _, err := file.WriteString(header + "\n"); err != nil {
 			return err
 		}

@@ -3,6 +3,7 @@ package magictext
 import (
 	"crypto/md5"
 	"fmt"
+	"math/rand"
 	"strconv"
 	"time"
 )
@@ -21,8 +22,19 @@ func validateTokens(text string, maximum int) (int, bool) {
 	return numOfTokens, true
 }
 
-func randomFilename() string {
+func randFilename() string {
 	return strconv.FormatInt(time.Now().UnixNano(), 10)
+}
+
+func randString() string {
+	rand.Seed(time.Now().UnixNano())
+
+	var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+	b := make([]rune, rand.Intn(60)+80)
+	for i := range b {
+		b[i] = letterRunes[rand.Intn(len(letterRunes))]
+	}
+	return string(b)
 }
 
 func hashString(text string) string {

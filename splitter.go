@@ -13,9 +13,9 @@ var (
 	re = regexp.MustCompile("\\n+")
 )
 
-func SplitSubtitle(subtitle subtitles.Subtitle) ([]CaptionChunk, error) {
+func SplitSubtitle(subtitle subtitles.Subtitle) ([]*CaptionChunk, error) {
 	sb := strings.Builder{}
-	chunks := make([]CaptionChunk, 0, 21)
+	chunks := make([]*CaptionChunk, 0, 11)
 
 	var start time.Time
 	seq := 0
@@ -25,18 +25,17 @@ func SplitSubtitle(subtitle subtitles.Subtitle) ([]CaptionChunk, error) {
 		}
 
 		text := strings.Join(caption.Text, " ")
-		if CountTokens(sb.String()+text) > MaxTokens2048 {
+		if CountTokens(sb.String()+text) > MaxReqTokens2048 {
 			chunks = append(chunks, NewCaptionChunk(seq, sb.String(), start))
-			seq++
 
 			sb.Reset()
 			start = caption.Start
+			seq++
 		}
 		sb.WriteString(text + " ")
 
 		if i == len(subtitle.Captions)-1 && len(sb.String()) > 0 {
 			chunks = append(chunks, NewCaptionChunk(seq, sb.String(), start))
-			seq++
 		}
 	}
 
@@ -44,8 +43,8 @@ func SplitSubtitle(subtitle subtitles.Subtitle) ([]CaptionChunk, error) {
 }
 
 func SplitText(text string, chunkSize, chunkOverlap int) ([]string, error) {
-	if chunkSize > MaxTokens2048 {
-		return nil, fmt.Errorf("The max tokens per chunk is %d, got %d", MaxTokens2048, chunkSize)
+	if chunkSize > MaxReqTokens2048 {
+		return nil, fmt.Errorf("The max tokens per chunk is %d, got %d", MaxReqTokens2048, chunkSize)
 	}
 
 	if chunkOverlap > chunkSize {

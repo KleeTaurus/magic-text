@@ -30,12 +30,14 @@ func retry(fn func(string) (string, error), prompt string, retryTimes int) (stri
 			time.Sleep(time.Second * SleepSeconds)
 		}
 	}
-	return "", fmt.Errorf("retry failed for %d times", retryTimes)
+	return "", fmt.Errorf("retry failed after %d times", retryTimes)
 }
 
 func completion(prompt string) (string, error) {
 	if MockOpenAI {
-		return fmt.Sprintf("fake content, now = %v", time.Now()), nil
+		// return "", fmt.Errorf("Mock OpenAI failed")
+		time.Sleep(time.Second * 2)
+		return fmt.Sprintf("fake content, %s", randString()), nil
 	}
 
 	if Debug {
@@ -46,7 +48,7 @@ func completion(prompt string) (string, error) {
 		context.Background(),
 		openai.ChatCompletionRequest{
 			Model:       openai.GPT3Dot5Turbo,
-			MaxTokens:   250,
+			MaxTokens:   500,
 			Temperature: 0.2,
 			Messages: []openai.ChatCompletionMessage{
 				{

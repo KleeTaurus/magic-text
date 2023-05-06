@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/joho/godotenv"
 	"github.com/martinlindhe/subtitles"
@@ -12,20 +14,9 @@ import (
 	"github.com/sashabaranov/go-openai"
 )
 
-type Summary struct {
-	ID   string
-	Seq  int
-	Text string
-}
-
-type SubtitleSummary struct {
-	From time.Time
-	Summary
-}
-
 const (
-	MaxTokens512  = 512
-	MaxTokens2048 = 2048
+	MaxReqTokens512  = 512
+	MaxReqTokens2048 = 2048
 )
 
 var (
@@ -34,6 +25,57 @@ var (
 	OpenAIClient *openai.Client
 	TikToken     *tiktoken.Tiktoken
 )
+
+type Summary struct {
+	ID   string
+	Seq  int
+	Text string
+}
+
+type CaptionSummary struct {
+	From time.Time
+	To   time.Time
+	Summary
+}
+
+func (cs CaptionSummary) FromString() string {
+	return cs.From.Format("15:04:05")
+}
+
+type TextChunk struct {
+	ID     string `json:"id"`
+	Seq    int    `json:"seq"`
+	Text   string `json:"text"`
+	Tokens int    `json:"tokens"`
+}
+
+type CaptionChunk struct {
+	From time.Time `json:"from"`
+	TextChunk
+}
+
+func NewCaptionChunk(seq int, text string, from time.Time) *CaptionChunk {
+	text = strings.TrimSpace(text)
+
+	cc := CaptionChunk{}
+	cc.ID = hashString(text)
+	cc.Seq = seq
+	cc.Text = text
+	cc.From = from
+	cc.Tokens = CountTokens(text)
+
+	return &cc
+}
+
+func (c CaptionChunk) String() string {
+	text := c.Text
+	maxLength := 80
+	if utf8.RuneCountInString(c.Text) > maxLength {
+		text = fmt.Sprintf("%s...", string([]rune(c.Text)[:maxLength-3]))
+	}
+
+	return fmt.Sprintf("%s <%04d> %s %s", c.ID[:8], c.Tokens, c.From.Format("15:04:05"), text)
+}
 
 func init() {
 	// 1. get openai api key
@@ -54,8 +96,8 @@ func init() {
 }
 
 // GenerateSummaryBySubtitle generates a summary for the given subtitles
-func GenerateSummaryBySubtitle(topic string, subtitle subtitles.Subtitle) ([]*SubtitleSummary, string, error) {
-	subtitleSummaries := make([]*SubtitleSummary, 0, 11)
+func GenerateSummaryBySubtitle(topic string, subtitle subtitles.Subtitle) ([]*CaptionSummary, string, error) {
+	subtitleSummaries := make([]*CaptionSummary, 0, 11)
 
 	// Split subtitle into caption chunks
 	captionChunks, err := SplitSubtitle(subtitle)
@@ -65,7 +107,7 @@ func GenerateSummaryBySubtitle(topic string, subtitle subtitles.Subtitle) ([]*Su
 
 	// Save caption chunks into a map, so we can get start time
 	// by content hash id
-	captionChunksMap := make(map[string]CaptionChunk, 0)
+	captionChunksMap := make(map[string]*CaptionChunk, 0)
 	chunks := make(ChunkSlice, 0, len(captionChunks))
 	for i, cc := range captionChunks {
 		chunks = append(chunks, NewChunk(i, cc.Text))
@@ -78,7 +120,7 @@ func GenerateSummaryBySubtitle(topic string, subtitle subtitles.Subtitle) ([]*Su
 		return subtitleSummaries, "", err
 	}
 
-	randomFile := randomFilename()
+	randomFile := randFilename()
 	DumpChunksToJSON("/tmp/"+randomFile+"_1.json", captionChunks)
 	DumpChunksToJSON("/tmp/"+randomFile+"_2.json", chunks)
 	DumpChunksToJSON("/tmp/"+randomFile+"_3.json", rootChunk)
@@ -86,13 +128,13 @@ func GenerateSummaryBySubtitle(topic string, subtitle subtitles.Subtitle) ([]*Su
 	summary := rootChunk.Text
 	for _, child := range rootChunk.Children {
 		for _, grandchild := range child.Children {
-			ss := &SubtitleSummary{}
+			ss := &CaptionSummary{}
 			ss.ID = grandchild.ID
 			ss.Seq = grandchild.Seq
 			ss.Text = grandchild.Text
 
-			leaf := getLeafChunk(grandchild)
-			if cc, ok := captionChunksMap[leaf.ID]; ok {
+			leafFrom := getLeafChunk(grandchild)
+			if cc, ok := captionChunksMap[leafFrom.ID]; ok {
 				ss.From = cc.From
 			}
 
@@ -107,13 +149,14 @@ func getLeafChunk(target *Chunk) *Chunk {
 	if len(target.Children) == 0 {
 		return target
 	}
+
 	return getLeafChunk(target.Children[0])
 }
 
 // GenerateTitle generates a title for the given text, the max length of input text is 512.
 func GenerateTitle(text string) (string, error) {
-	if tokens, ok := validateTokens(text, MaxTokens512); !ok {
-		return "", fmt.Errorf("The maximum tokens supported is %d, got %d", MaxTokens512, tokens)
+	if tokens, ok := validateTokens(text, MaxReqTokens512); !ok {
+		return "", fmt.Errorf("The maximum tokens supported is %d, got %d", MaxReqTokens512, tokens)
 	}
 
 	result, err := completionWithRetry(fmt.Sprintf(GenerateTitlePrompt, text))
@@ -137,8 +180,8 @@ func GenerateTitle(text string) (string, error) {
 //	   "book_names": ["万历十五年", "湘行散记", "货币未来"]
 //	}
 func ExtractNouns(text string) (string, error) {
-	if tokens, ok := validateTokens(text, MaxTokens2048); !ok {
-		return "", fmt.Errorf("The maximum tokens supported is %d, got %d", MaxTokens2048, tokens)
+	if tokens, ok := validateTokens(text, MaxReqTokens2048); !ok {
+		return "", fmt.Errorf("The maximum tokens supported is %d, got %d", MaxReqTokens2048, tokens)
 	}
 
 	result, err := completionWithRetry(fmt.Sprintf(ExtractNounsPrompt, text))
