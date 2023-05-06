@@ -3,12 +3,10 @@ package magictext
 import (
 	"fmt"
 	"log"
-	"os"
 	"strings"
 	"time"
 	"unicode/utf8"
 
-	"github.com/joho/godotenv"
 	"github.com/martinlindhe/subtitles"
 	"github.com/pkoukk/tiktoken-go"
 	"github.com/sashabaranov/go-openai"
@@ -84,16 +82,7 @@ func (c CaptionChunk) String() string {
 }
 
 func init() {
-	// 1. get openai api key
-	// 2. initialize tiktoken
-	godotenv.Load()
-
-	apiKey := os.Getenv("OPENAI_API_KEY")
-	if apiKey == "" {
-		log.Fatal("Missing OpenAI API key, You must set OPENAI_API_KEY environment variable first")
-	}
-	OpenAIClient = openai.NewClient(apiKey)
-
+	// initialize tiktoken
 	var err error
 	TikToken, err = tiktoken.GetEncoding("cl100k_base") // support models: gpt-4, gpt-3.5-turbo, text-embedding-ada-002
 	if err != nil {

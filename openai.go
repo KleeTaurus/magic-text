@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 	"time"
 
 	"github.com/sashabaranov/go-openai"
@@ -44,6 +45,12 @@ func completion(prompt string) (string, error) {
 		log.Printf("prompt:\n%s", prompt)
 	}
 
+	apiKey := os.Getenv("OPENAI_API_KEY")
+	if apiKey == "" {
+		return "", fmt.Errorf("Missing OpenAI API key, You must set OPENAI_API_KEY environment variable first")
+	}
+
+	OpenAIClient = openai.NewClient(apiKey)
 	resp, err := OpenAIClient.CreateChatCompletion(
 		context.Background(),
 		openai.ChatCompletionRequest{
