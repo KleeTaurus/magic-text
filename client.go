@@ -36,12 +36,20 @@ type CaptionSummary struct {
 	Summary
 }
 
-func (cs CaptionSummary) FromString() string {
+func (cs CaptionSummary) FromInString() string {
 	return cs.From.Format("15:04:05")
 }
 
-func (cs CaptionSummary) ToString() string {
+func (cs CaptionSummary) ToInString() string {
 	return cs.To.Format("15:04:05")
+}
+
+func (cs CaptionSummary) FromInSeconds() int {
+	return cs.From.Hour()*3600 + cs.From.Minute()*60 + cs.From.Second()
+}
+
+func (cs CaptionSummary) ToInSeconds() int {
+	return cs.To.Hour()*3600 + cs.To.Minute()*60 + cs.To.Second()
 }
 
 type TextChunk struct {

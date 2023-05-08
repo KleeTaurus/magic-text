@@ -35,14 +35,12 @@ func retry(fn func(string) (string, error), prompt string, retryTimes int) (stri
 }
 
 func completion(prompt string) (string, error) {
-	if MockOpenAI {
-		// return "", fmt.Errorf("Mock OpenAI failed")
-		time.Sleep(time.Second * 1 / 2)
-		return fmt.Sprintf("fake content, %s", randString()), nil
-	}
-
 	if Debug {
 		log.Printf("prompt:\n%s", prompt)
+	}
+
+	if MockOpenAI {
+		return fmt.Sprintf("It's a mock response of openai api, data: %s", randString()), nil
 	}
 
 	apiKey := os.Getenv("OPENAI_API_KEY")
