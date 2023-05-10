@@ -36,19 +36,19 @@ type CaptionSummary struct {
 	Summary
 }
 
-func (cs CaptionSummary) FromInString() string {
+func (cs *CaptionSummary) FromInString() string {
 	return cs.From.Format("15:04:05")
 }
 
-func (cs CaptionSummary) ToInString() string {
+func (cs *CaptionSummary) ToInString() string {
 	return cs.To.Format("15:04:05")
 }
 
-func (cs CaptionSummary) FromInSeconds() int {
+func (cs *CaptionSummary) FromInSeconds() int {
 	return cs.From.Hour()*3600 + cs.From.Minute()*60 + cs.From.Second()
 }
 
-func (cs CaptionSummary) ToInSeconds() int {
+func (cs *CaptionSummary) ToInSeconds() int {
 	return cs.To.Hour()*3600 + cs.To.Minute()*60 + cs.To.Second()
 }
 
@@ -79,9 +79,9 @@ func NewCaptionChunk(seq int, text string, from, to time.Time) *CaptionChunk {
 	return &cc
 }
 
-func (c CaptionChunk) String() string {
+func (c *CaptionChunk) String() string {
 	text := c.Text
-	maxLength := 80
+	maxLength := 60
 	if utf8.RuneCountInString(c.Text) > maxLength {
 		text = fmt.Sprintf("%s...", string([]rune(c.Text)[:maxLength-3]))
 	}
@@ -89,18 +89,9 @@ func (c CaptionChunk) String() string {
 	return fmt.Sprintf("%s <%04d> %s %s", c.ID[:8], c.Tokens, c.From.Format("15:04:05"), text)
 }
 
-func init() {
-	// initialize tiktoken
-	var err error
-	TikToken, err = tiktoken.GetEncoding("cl100k_base") // support models: gpt-4, gpt-3.5-turbo, text-embedding-ada-002
-	if err != nil {
-		log.Fatal(err)
-	}
-}
-
 // GenerateSummaryBySubtitle generates a summary for the given subtitles
 func GenerateSummaryBySubtitle(topic string, subtitle subtitles.Subtitle) ([]*CaptionSummary, string, error) {
-	subtitleSummaries := make([]*CaptionSummary, 0, 11)
+	subtitleSummaries := make([]*CaptionSummary, 0, 10)
 
 	// Split subtitle into caption chunks
 	captionChunks, err := SplitSubtitle(subtitle)
@@ -124,9 +115,9 @@ func GenerateSummaryBySubtitle(topic string, subtitle subtitles.Subtitle) ([]*Ca
 	}
 
 	randomFile := randFilename()
-	DumpChunksToJSON("/tmp/"+randomFile+"_1.json", captionChunks)
-	DumpChunksToJSON("/tmp/"+randomFile+"_2.json", chunks)
-	DumpChunksToJSON("/tmp/"+randomFile+"_3.json", rootChunk)
+	_ = DumpChunksToJSON("/tmp/"+randomFile+"_1.json", captionChunks)
+	_ = DumpChunksToJSON("/tmp/"+randomFile+"_2.json", chunks)
+	_ = DumpChunksToJSON("/tmp/"+randomFile+"_3.json", rootChunk)
 
 	summary := rootChunk.Text
 	for _, child := range rootChunk.Children {
@@ -165,7 +156,7 @@ func getLeafChunk(target *Chunk, isFirst bool) *Chunk {
 
 // GenerateTitle generates a title for the given text, the max length of input text is 512.
 func GenerateTitle(text string) (string, error) {
-	if tokens, ok := validateTokens(text, MaxReqTokens512); !ok {
+	if tokens, ok := ValidateTokens(text, MaxReqTokens512); !ok {
 		return "", fmt.Errorf("The maximum tokens supported is %d, got %d", MaxReqTokens512, tokens)
 	}
 
@@ -190,7 +181,7 @@ func GenerateTitle(text string) (string, error) {
 //	   "book_names": ["万历十五年", "湘行散记", "货币未来"]
 //	}
 func ExtractNouns(text string) (string, error) {
-	if tokens, ok := validateTokens(text, MaxReqTokens2048); !ok {
+	if tokens, ok := ValidateTokens(text, MaxReqTokens2048); !ok {
 		return "", fmt.Errorf("The maximum tokens supported is %d, got %d", MaxReqTokens2048, tokens)
 	}
 

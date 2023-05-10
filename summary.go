@@ -81,7 +81,6 @@ func groupChunks(cs ChunkSlice, height int) []ChunkSlice {
 	// height 2, max chunks = 7
 	// height 3, max chunks = 10
 	maxChunksInGroup := MaxChunksPerGroup*height + 1
-	// log.Printf("---> grouping chunks, size: %d, height: %d, max chunks: %d\n", len(cs), height, maxChunksInGroup)
 	groups := make([]ChunkSlice, 0, len(cs)/2)
 	chunkGroup := make(ChunkSlice, 0, maxChunksInGroup)
 	for _, chunk := range cs {

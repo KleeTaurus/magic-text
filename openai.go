@@ -40,7 +40,7 @@ func completion(prompt string) (string, error) {
 	}
 
 	if MockOpenAI {
-		return randString(80, 140), nil
+		return randString(15, 25), nil
 	}
 
 	apiKey := os.Getenv("OPENAI_API_KEY")
