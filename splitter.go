@@ -15,7 +15,7 @@ var (
 
 func SplitSubtitle(subtitle subtitles.Subtitle) ([]*CaptionChunk, error) {
 	sb := strings.Builder{}
-	chunks := make([]*CaptionChunk, 0, 11)
+	chunks := make([]*CaptionChunk, 0, 10)
 
 	var start time.Time
 	seq := 0
@@ -35,7 +35,9 @@ func SplitSubtitle(subtitle subtitles.Subtitle) ([]*CaptionChunk, error) {
 			start = caption.Start
 			seq++
 		}
-		sb.WriteString(text + " ")
+		if _, err := sb.WriteString(text + " "); err != nil {
+			return nil, err
+		}
 
 		if i == len(subtitle.Captions)-1 && len(sb.String()) > 0 {
 			chunks = append(chunks, NewCaptionChunk(seq, sb.String(), start, caption.End))
@@ -76,7 +78,9 @@ func SplitText(text string, chunkSize, chunkOverlap int) ([]string, error) {
 			chunks = append(chunks, strings.TrimSpace(sb.String())) // remove trailing spaces
 			sb.Reset()
 		}
-		sb.WriteString(text + " ")
+		if _, err := sb.WriteString(text + " "); err != nil {
+			return nil, err
+		}
 	}
 
 	if len(sb.String()) > 0 {

@@ -40,11 +40,12 @@ func (cs ChunkSlice) Tokens() int {
 }
 
 func (cs ChunkSlice) Text() string {
-	sb := strings.Builder{}
+	var text string
 	for _, chunk := range cs {
-		sb.WriteString(chunk.Text + " ") // TODO: replace the space with \n\n?
+		text += chunk.Text + " "
 	}
-	return sb.String()
+
+	return text
 }
 
 func (cs ChunkSlice) String() string {
