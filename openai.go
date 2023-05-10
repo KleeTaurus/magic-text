@@ -40,7 +40,7 @@ func completion(prompt string) (string, error) {
 	}
 
 	if MockOpenAI {
-		return fmt.Sprintf("It's a mock response of openai api, data: %s", randString()), nil
+		return randString(80, 140), nil
 	}
 
 	apiKey := os.Getenv("OPENAI_API_KEY")
