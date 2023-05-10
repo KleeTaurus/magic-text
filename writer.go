@@ -33,7 +33,10 @@ func DumpSummary(filename, summary string, captionSummaries []*CaptionSummary) e
 	}
 	defer file.Close()
 
-	file.WriteString(summary + "\n\n")
+	_, err = file.WriteString(summary + "\n\n")
+	if err != nil {
+		return err
+	}
 
 	for _, cs := range captionSummaries {
 		header := fmt.Sprintf("ID: %s, Seq: %d, Start: %s, End: %s", cs.ID, cs.Seq, cs.FromInString(), cs.ToInString())
